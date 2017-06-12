@@ -22,7 +22,6 @@ class IO_Layer(Layer):
                 initializer="zeros",
                 trainable=False,
                 name="MEMORY")
-        print(self.memory)
         # Units that will built the weight vector
         self.w_key_generator = self.add_weight(
                 shape=(input_size, self.entry_size),
@@ -56,6 +55,7 @@ class IO_Layer(Layer):
                 name="POST")
         
         super(IO_Layer, self).build(input_shape)  
+
     def call(self, x):
         def vect_dist(x, y):
             p = K.dot(x, K.transpose(y))
@@ -104,7 +104,7 @@ class IO_Layer(Layer):
             self.memory = tf.multiply(self.memory,minus)
             # print("new memory: ", self.memory)
 
-        x = x[0]
+        print("x shape: ", x)
         print("Input vector shape: "+str(x.shape))
         print("Generators shape: " + str(self.w_key_generator.shape))
         # Generating read and write keys
@@ -133,12 +133,9 @@ class IO_Layer(Layer):
         print("Reading...")
         r_vect = read_mem(r_weight)
         r_vect = tf.reshape(r_vect, (1, self.entry_size))
-        print(r_vect)
         x = tf.reshape(x, (1, self.entry_size))
         print("x: ", x)
         print("Computing output...")
-        print(tf.concat([x, r_vect], 1))
-        print(self.post_network)
         r =  K.dot(tf.concat([x, r_vect], 1), self.post_network)
         return r
 
