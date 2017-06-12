@@ -1,5 +1,5 @@
-# MemEx-LSTM
-Neural Network with LSTM structure and external memory. Goal is to study the use of memory for NN facing complex tasks
+# Dense-ExternalMemory
+Neural Network with Dense structure and external memory. Goal is to study the use of memory for NN facing complex tasks
 
 # Dependencies
 `python 3.6`, `tensorflow`, `keras`
