@@ -19,7 +19,7 @@ class IO_Layer(Layer):
         input_size=list(input_shape)[-1]
 
         self.memory = self.add_weight(shape=(self.mem_size, self.entry_size),
-                initializer="zeros",
+                initializer=initializers.random_uniform(minval=0.0, maxval=1.0),
                 trainable=False,
                 name="MEMORY")
 
@@ -27,32 +27,32 @@ class IO_Layer(Layer):
         # Units that will built the weight vector
         self.w_key_generator = self.add_weight(
                 shape=(input_size, self.entry_size),
-                initializer='uniform',
+                initializer=initializers.random_uniform(minval=0.0, maxval=1.0),
                 trainable=True,
                 name="W_KG")
          
         self.w_vector_generator = self.add_weight(
                 shape=(input_size, self.entry_size),
-                initializer='uniform',
+                initializer=initializers.random_uniform(minval=0.0, maxval=1.0),
                 trainable=True,
                 name="W_VG")
 
         self.w_erase_vect_gen = self.add_weight(
                 shape=(input_size, self.entry_size),
-                initializer='uniform',
+                initializer=initializers.random_uniform(minval=0.0, maxval=1.0),
                 trainable=True,
                 name="W_EVG")
 
         self.r_key_generator = self.add_weight(
                 shape=(input_size, self.entry_size),
-                initializer='uniform',
+                initializer=initializers.random_uniform(minval=0.0, maxval=1.0),
                 trainable=True,
                 name="R_KG")
         
 
         self.post_network = self.add_weight(
                 shape=(self.entry_size + input_size, self.output_size),
-                initializer='uniform',
+                initializer=initializers.random_uniform(minval=0.0, maxval=1.0),
                 trainable=True,
                 name="POST")
         
@@ -65,14 +65,17 @@ class IO_Layer(Layer):
             p = K.dot(x, K.transpose(y))
 
             nx = tf.norm(x) 
-            ny = tf.norm(y) 
+            ny = tf.norm(y)
             return p/(nx*ny)
 
         print("Calling...")
         def focus_by_content(x):
             dists = [vect_dist(x, tf.reshape(m, (1, int(m.shape[0]))))
                 for m in tf.unstack(self.memory)]
+            
             s = sum(dists)
+            print("\nSum: ", s)
+
             v = [d/s for d in dists]
             return tf.concat(v, axis=1)
 
@@ -124,3 +127,11 @@ class IO_Layer(Layer):
         print("Computing output shape...")
         return (input_shape[0], 1, self.output_size) 
 
+    def get_config(self):
+        config = {
+                'memory_size': self.mem_size, 
+                'entry_size': self.entry_size,
+                'output_size': self.output_size
+        }
+        base_config = super(IO_Layer, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
