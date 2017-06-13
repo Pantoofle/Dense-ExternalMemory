@@ -3,22 +3,22 @@ import sys
 
 sys.path.append("layers/")
 
-from keras.models import *
+#  from keras.models import *
 from keras.layers import *
 from keras.callbacks import *
 
 from io_memory import *
 from data import *
 
-UPPER_BOUND=100
+UPPER_BOUND=200
 MEMORY_SIZE=50
 NB_TIMESTEP=1
 
-NB_TRAIN=1000
+NB_TRAIN=100
 NB_TESTS=10
 
-NB_EPOCH=50
-BATCH_SIZE=10
+NB_EPOCH=10
+BATCH_SIZE=50
 ENTRY_SIZE=UPPER_BOUND
 
 SAVE_DIR="models/"
