@@ -3,9 +3,7 @@ import sys
 
 sys.path.append("layers/")
 
-#  from keras.models import *
-from keras.layers import *
-from keras.callbacks import *
+from keras.callbacks import ModelCheckpoint
 
 from io_memory import *
 from data import *
