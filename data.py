@@ -1,4 +1,7 @@
 import numpy as np
+from keras import *
+from keras.models import *
+from keras.models import model_from_json
 
 def parity_batch(nb_tests, upper_bound):
     nbs = np.random.random_integers(upper_bound, size=(nb_tests,))-1
@@ -10,3 +13,4 @@ def parity_batch(nb_tests, upper_bound):
             y[i] = 1.
 
     return x, y
+
