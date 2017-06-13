@@ -22,15 +22,16 @@ class IO_Layer(Layer):
                 initializer="zeros",
                 trainable=False,
                 name="MEMORY")
-        print(self.memory)
+
+        self.memory.eval(K.get_session())
         # Units that will built the weight vector
         self.w_key_generator = self.add_weight(
                 shape=(input_size, self.entry_size),
                 initializer='uniform',
                 trainable=True,
                 name="W_KG")
-        
-        self.w_vect_generator = self.add_weight(
+         
+        self.w_vector_generator = self.add_weight(
                 shape=(input_size, self.entry_size),
                 initializer='uniform',
                 trainable=True,
@@ -55,8 +56,11 @@ class IO_Layer(Layer):
                 trainable=True,
                 name="POST")
         
-        super(IO_Layer, self).build(input_shape)  
+        self.build = True
+    
     def call(self, x):
+        total_input=x.shape[0]
+        
         def vect_dist(x, y):
             p = K.dot(x, K.transpose(y))
 
@@ -66,86 +70,57 @@ class IO_Layer(Layer):
 
         print("Calling...")
         def focus_by_content(x):
-            dists = [vect_dist(x, tf.reshape(m, [1, int(m.shape[0])]))
+            dists = [vect_dist(x, tf.reshape(m, (1, int(m.shape[0]))))
                 for m in tf.unstack(self.memory)]
             s = sum(dists)
             v = [d/s for d in dists]
-            r = tf.reshape(v, (self.mem_size,1))
-            return r 
+            return tf.concat(v, axis=1)
 
         def read_mem(weight):
             r = tf.multiply(self.memory,weight)
-            res = tf.add_n(tf.unstack(r))
+            res = tf.reduce_sum(r, axis=1, keep_dims=True)
             return res
 
         def write_mem(weight, erase, vector):
-            erase = tf.reshape(erase, (1, self.entry_size))
-            one = tf.constant(np.ones((1, self.entry_size), dtype="float32"))
-            stacked_ones = tf.stack([one for i in range(self.mem_size)])
-            stacked_erase = tf.stack([erase for i in range(self.mem_size)])
-            weight = tf.reshape(weight, [self.mem_size, 1, 1])
-            
-            
-            #print("memory: ", self.memory)
-            #print("one: ", one)
-            #print("erase: ", erase)
-            #print("stacked_one: ", stacked_ones)
-            #print("stacked_erase: ", stacked_erase)
-            #print("weight: ", weight)
-            
+            eraser = tf.multiply(weight, erase)
+            self.memory = tf.subtract(self.memory,
+                    tf.multiply(self.memory, eraser))
+            self.memory = tf.add(self.memory, tf.multiply(weight, vector))
 
-            weighted_erase = weight*stacked_erase
-            # print("weighted_erase shape: ", weighted_erase.shape)
-            # print(self.memory)
-            minus = stacked_ones - weighted_erase
-            minus = tf.reshape(minus, (self.mem_size, self.entry_size))
-            # print("minus: ", minus)
-            # print("mem: ", self.memory)
-            self.memory = tf.multiply(self.memory,minus)
-            # print("new memory: ", self.memory)
+        print("Input vector shape: ", x.shape)
 
-        x = x[0]
-        print("Input vector shape: "+str(x.shape))
-        print("Generators shape: " + str(self.w_key_generator.shape))
+#        print("Generators shape: ", self.w_key_generator.shape)
         # Generating read and write keys
         w_key = K.dot(x, self.w_key_generator)
         r_key = K.dot(x, self.r_key_generator)
-        print("Key shape: " + str(w_key.shape))
+#        print("Key shape: ", w_key.shape)
 
         # Focus by content
         print("Generating weights...")
         w_weight = focus_by_content(w_key)
         r_weight = focus_by_content(r_key)
-
+#        print("Weights shape: ", w_weight)
         # Erase vector for writing
-        print("Erasing...")
+        print("Generating erase vector...")
         erase = K.dot(x, self.w_erase_vect_gen)
 
         # Vector to be written
         print("Generating write vector...")
-        vect = K.dot(x, self.w_vect_generator)
-
+        vect = K.dot(x, self.w_vector_generator)
         # Writing
         print("Writing...")
+
         write_mem(w_weight, erase, vect)
     
         # Reading
         print("Reading...")
         r_vect = read_mem(r_weight)
-        r_vect = tf.reshape(r_vect, (1, self.entry_size))
-        print(r_vect)
-        x = tf.reshape(x, (1, self.entry_size))
-        print("x: ", x)
         print("Computing output...")
-        print(tf.concat([x, r_vect], 1))
-        print(self.post_network)
-        r =  K.dot(tf.concat([x, r_vect], 1), self.post_network)
+        conc = tf.concat([x, r_vect], 2)
+        r =  K.dot(conc, self.post_network)
         return r
 
     def compute_output_shape(self, input_shape):
         print("Computing output shape...")
-        print("Input: " + str(input_shape))
-        output_shape = list(input_shape)
-        output_shape[-1] = self.output_size
-        print("Output: " + str(tuple(output_shape)))
-        return (tuple(output_shape))
+        return (input_shape[0], 1, self.output_size) 
+
