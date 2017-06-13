@@ -11,11 +11,11 @@ from data import *
 
 UPPER_BOUND=1000
 NB_TIMESTEP=1
-NB_TESTS=50
+NB_TESTS=1000
 
-NB_EPOCH=5
-BATCH_SIZE=10
-MEMORY_SIZE=15
+NB_EPOCH=50
+BATCH_SIZE=50
+MEMORY_SIZE=100
 ENTRY_SIZE=UPPER_BOUND
 
 if __name__ == "__main__":
@@ -39,22 +39,14 @@ if __name__ == "__main__":
 
     model.summary() 
     print("Input shape: ", model.input_shape)
-    print(model)
     print("Getting data...")
     x_in, y_in = parity_batch(NB_TESTS, UPPER_BOUND) 
-    x_train = tf.reshape(x_in, (NB_TESTS, 1, UPPER_BOUND))
-    y_train = tf.reshape(y_in, (NB_TESTS, 1, 1))
+    x_train = np.reshape(x_in, (NB_TESTS, 1, UPPER_BOUND))
+    y_train = np.reshape(y_in, (NB_TESTS, 1, 1))
     print("Saving...")
     model.save(save_path+"model.h5")
 
-    print(x_train)
-    print(y_train)
     print("Training...")
     model.fit(x_train, y_train, epochs=NB_EPOCH, batch_size=BATCH_SIZE)
  
     model.save(save_path+"model.h5")
-
-    print("Testing...")
-    x_tst, y_tst = read_input(1, INPUT_DIM)
-    res = model.evaluate(x_tst, y_tst, batch_size=BATCH_SIZE)
-    print(res)
