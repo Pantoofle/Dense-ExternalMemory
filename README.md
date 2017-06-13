@@ -1,4 +1,4 @@
- Dense-ExternalMemory
+# Dense-ExternalMemory - DEV Branch
 Neural Network with Dense structure and external memory. Goal is to study the use of memory for NN facing complex tasks
 
 # Dependencies
