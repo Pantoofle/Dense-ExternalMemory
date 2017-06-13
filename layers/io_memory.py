@@ -74,8 +74,6 @@ class IO_Layer(Layer):
                 for m in tf.unstack(self.memory)]
             
             s = sum(dists)
-            print("\nSum: ", s)
-
             v = [d/s for d in dists]
             return tf.concat(v, axis=1)
 
