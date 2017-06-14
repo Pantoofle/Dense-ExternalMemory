@@ -19,7 +19,7 @@ class IO_Layer(Layer):
         input_size=list(input_shape)[-1]
 
         self.memory = self.add_weight(shape=(self.mem_size, self.entry_size),
-                initializer=initializers.random_uniform(minval=0.0, maxval=1.0),
+                initializer=initializers.random_uniform(minval=0.001, maxval=0.1),
                 trainable=False,
                 name="MEMORY")
 
@@ -66,7 +66,9 @@ class IO_Layer(Layer):
 
             nx = tf.norm(x) 
             ny = tf.norm(y)
-            return p/(nx*ny+0.001)
+            d = p/(nx*ny+0.001)
+            l = tf.constant([1000], shape=())
+            return tf.minimum(d, l)
 
         print("Calling...")
         def focus_by_content(x):
