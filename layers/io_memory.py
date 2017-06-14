@@ -66,7 +66,7 @@ class IO_Layer(Layer):
 
             nx = tf.norm(x) 
             ny = tf.norm(y)
-            return p/(nx*ny)
+            return p/(nx*ny+0.001)
 
         print("Calling...")
         def focus_by_content(x):
