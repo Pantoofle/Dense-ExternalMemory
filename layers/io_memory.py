@@ -67,7 +67,7 @@ class IO_Layer(Layer):
             nx = tf.norm(x) 
             ny = tf.norm(y)
             d = p/(nx*ny+0.001)
-            l = tf.constant([1000], shape=())
+            l = tf.constant([1000.], shape=())
             return tf.minimum(d, l)
 
         print("Calling...")
