@@ -4,6 +4,7 @@ build:
 	mkdir models
 
 run:
+	rm -rf logs/
 	python main.py
 
 clean:
