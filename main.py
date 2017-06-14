@@ -75,12 +75,12 @@ if __name__ == "__main__":
             embeddings_layer_names=None, 
             embeddings_metadata=None)
     early_stop = EarlyStopping(monitor='loss', min_delta=DELTA_STOP, patience=0, verbose=0, mode='auto')
-
+    stop_nan = TerminateOnNaN()
 
     model.fit(x_train, y_train, 
             epochs=NB_EPOCH, 
             batch_size=BATCH_SIZE,
-             callbacks=[check_point, log_export, early_stop])
+             callbacks=[check_point, log_export, early_stop, stop_nan])
  
     print("Saving model...")
     model.save(SAVE_DIR+save_name)
