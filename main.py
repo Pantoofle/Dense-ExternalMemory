@@ -8,16 +8,18 @@ from keras.callbacks import *
 from io_memory import *
 from data import *
 
-UPPER_BOUND=200
-MEMORY_SIZE=50
+UPPER_BOUND=100
+MEMORY_SIZE=10
 NB_TIMESTEP=1
 
-NB_TRAIN=10000
+NB_TRAIN=5000
 NB_TESTS=10
 
-NB_EPOCH=2
-BATCH_SIZE=100
+NB_EPOCH=50
+BATCH_SIZE=50
 ENTRY_SIZE=UPPER_BOUND
+
+DELTA_STOP=0.001
 
 SAVE_DIR="models/"
 
@@ -62,8 +64,8 @@ if __name__ == "__main__":
     print("NB_EPOCH:    ", NB_EPOCH)
     print("BATCH_SIZE:  ", BATCH_SIZE)
 
-    cp = ModelCheckpoint(SAVE_DIR+save_name)
-    tb = TensorBoard(log_dir='./logs', 
+    check_point = ModelCheckpoint(SAVE_DIR+save_name)
+    log_export = TensorBoard(log_dir='./logs', 
             histogram_freq=0, 
             batch_size=32, 
             write_graph=True, 
@@ -72,10 +74,13 @@ if __name__ == "__main__":
             embeddings_freq=0, 
             embeddings_layer_names=None, 
             embeddings_metadata=None)
+    early_stop = EarlyStopping(monitor='loss', min_delta=DELTA_STOP, patience=0, verbose=0, mode='auto')
+
+
     model.fit(x_train, y_train, 
             epochs=NB_EPOCH, 
             batch_size=BATCH_SIZE,
-            callbacks=[cp, tb])
+             callbacks=[check_point, log_export, early_stop])
  
     print("Saving model...")
     model.save(SAVE_DIR+save_name)
@@ -86,7 +91,9 @@ if __name__ == "__main__":
     y_tst = np.reshape(y_in, (NB_TESTS, 1, 1))
  
     pre = model.predict(x_tst)
-    print("Prediction: ", pre)
-    print("Solution: ", y_tst)
-
+    pre = [p > 0.5 for p in pre]
+    res = [p > 0.5 for p in y_tst]
+    ok = sum([1 for x, y in zip(pre, res) if x == y  ])
+    print("Nb tests:   ", NB_TESTS)
+    print("Nb success: ", ok)
 
