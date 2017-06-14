@@ -55,8 +55,23 @@ if __name__ == "__main__":
 
 
     print("Training...")
+    print("Variables: ")
+    print("UPPER_BOUND: ", UPPER_BOUND)
+    print("MEMORY_SIZE: ", MEMORY_SIZE)
+    print("NB_TRAIN:    ", NB_TRAIN)
+    print("NB_EPOCH:    ", NB_EPOCH)
+    print("BATCH_SIZE:  ", BATCH_SIZE)
+
     cp = ModelCheckpoint(SAVE_DIR+save_name)
-    tb = TensorBoard(log_dir='./logs', histogram_freq=0, batch_size=32, write_graph=True, write_grads=False, write_images=False, embeddings_freq=0, embeddings_layer_names=None, embeddings_metadata=None)
+    tb = TensorBoard(log_dir='./logs', 
+            histogram_freq=0, 
+            batch_size=32, 
+            write_graph=True, 
+            write_grads=False, 
+            write_images=False, 
+            embeddings_freq=0, 
+            embeddings_layer_names=None, 
+            embeddings_metadata=None)
     model.fit(x_train, y_train, 
             epochs=NB_EPOCH, 
             batch_size=BATCH_SIZE,
