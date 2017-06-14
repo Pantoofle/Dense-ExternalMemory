@@ -5,7 +5,7 @@ build:
 
 run:
 	rm -rf logs/
-	python main.py
+	TF_CPP_MIN_LOG_LEVEL=1 python main.py
 
 clean:
 	@echo Cleaning...
