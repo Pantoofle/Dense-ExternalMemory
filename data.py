@@ -14,27 +14,15 @@ def parity_batch(nb_tests, upper_bound):
 
     return x, y
 
-def include_batch(nb_tests, seq_size, vect_size, include_prob):
-    x = np.zeros((nb_tests, seq_size+2, vect_size), dtype="float32")
-    y = np.zeros(nb_tests, dtype="float32")
+def include_batch(nb_tests, seq_size, vect_size):
+    x = np.zeros((nb_tests, seq_size, vect_size), dtype="float32")
+    y = np.zeros((nb_tests, seq_size), dtype="float32")
 
-    for k in range(nb_tests):
-        seq = np.random.random((seq_size, vect_size))
-    
-        # Adding delimiter
-        seq = np.append(seq, np.zeros((1, vect_size), dtype="float32"), axis=0)
-
-        # Building question and solution
-        if np.random.random() < include_prob:
-            # Choosing the added vector
-            i = np.random.randint(seq_size)
-            seq = np.append(seq, [seq[i]], axis=0)
-            sol = 1.
-        else:
-            seq = np.append(seq, np.random.random((1, vect_size)), axis=0)
-            sol = 0.
-
-        x[k] = seq
-        y[k] = sol
+    for i in range(nb_tests):
+        n = np.random.random_integers(vect_size, size=(seq_size,))-1
+        for j in range(seq_size):
+            x[i, j, n[j]] = 1.
+            if n[j] in n[:j]:
+                y[i, j] = 1.
 
     return x, y
