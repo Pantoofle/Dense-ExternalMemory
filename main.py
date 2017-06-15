@@ -4,22 +4,16 @@ import sys
 sys.path.append("layers/")
 
 from keras.callbacks import *
-
-from io_memory import *
+from builder import *
 from data import *
 
-UPPER_BOUND=100
-MEMORY_SIZE=10
-NB_TIMESTEP=1
+VECTOR_SIZE=10
+MEMORY_SIZE=20
+SEQ_LENGTH=5
+INCLUDE_PROB=0.5
 
 NB_TRAIN=5000
-NB_TESTS=10
-
-NB_EPOCH=50
-BATCH_SIZE=50
-ENTRY_SIZE=UPPER_BOUND
-
-DELTA_STOP=0.001
+NB_TESTS=100
 
 SAVE_DIR="models/"
 
@@ -32,68 +26,73 @@ if __name__ == "__main__":
         save_name = sys.argv[2]
     else:
         print("Building new model...")
-        model = Sequential()
-        model.add(IO_Layer(input_shape=(NB_TIMESTEP, UPPER_BOUND),
-            memory_size=MEMORY_SIZE, 
-            entry_size=ENTRY_SIZE,
-            output_size=1))
-        # model.add(Dense(1, activation='sigmoid'))
+        model = build_RNN(input_shape=(VECTOR_SIZE+1,), 
+                memory_size=MEMORY_SIZE, 
+                vect_size=VECTOR_SIZE, 
+                output_size=1)
         save_name = input("Enter model name: ")
 
     print("Compiling...")
     model.compile(optimizer='sgd',
                   loss='mean_squared_error',
                   metrics=['accuracy'])
-
+    
     model.summary() 
+    empty_mem = model.layers[1].get_weights()
+    
     print("Input shape: ", model.input_shape)
     print("Getting data...")
-    x_in, y_in = parity_batch(NB_TRAIN, UPPER_BOUND) 
-    x_train = np.reshape(x_in, (NB_TRAIN, 1, UPPER_BOUND))
-    y_train = np.reshape(y_in, (NB_TRAIN, 1, 1))
+    x_in, y_in = include_batch(NB_TRAIN, 
+            SEQ_LENGTH, 
+            VECTOR_SIZE, 
+            INCLUDE_PROB)  
  
     print("Saving model...")
     model.save(SAVE_DIR+save_name)
-
-
     print("Training...")
-    print("Variables: ")
-    print("UPPER_BOUND: ", UPPER_BOUND)
-    print("MEMORY_SIZE: ", MEMORY_SIZE)
-    print("NB_TRAIN:    ", NB_TRAIN)
-    print("NB_EPOCH:    ", NB_EPOCH)
-    print("BATCH_SIZE:  ", BATCH_SIZE)
 
-    check_point = ModelCheckpoint(SAVE_DIR+save_name)
-    log_export = TensorBoard(log_dir='./logs', 
-            histogram_freq=0, 
-            batch_size=32, 
-            write_graph=True, 
-            write_grads=False, 
-            write_images=False, 
-            embeddings_freq=0, 
-            embeddings_layer_names=None, 
-            embeddings_metadata=None)
-    early_stop = EarlyStopping(monitor='loss', min_delta=DELTA_STOP, patience=0, verbose=0, mode='auto')
-    stop_nan = TerminateOnNaN()
+    i = 1
+    for x_seq, y_seq in zip(x_in, y_in):
+        print("Training sequence ", i,"/", NB_TRAIN)
+        i += 1
+        model.layers[1].set_weights(empty_mem)
+        previous = np.zeros(shape=(1, 1), dtype="float32")
+        for x in x_seq[:-1] :
+            x = np.reshape(x, (1, VECTOR_SIZE))
+            v = np.concatenate((previous, x), axis=1)
+            previous = model.predict(v) 
+        x = np.reshape(x_seq[-1], (1, VECTOR_SIZE))
+        v = np.concatenate((previous, x), axis=1)
+        solution = np.array([[y_seq]])
+        model.train_on_batch(v, solution)
+    print("Training done !")
 
-    model.fit(x_train, y_train, 
-            epochs=NB_EPOCH, 
-            batch_size=BATCH_SIZE,
-             callbacks=[check_point, log_export, early_stop, stop_nan])
- 
     print("Saving model...")
     model.save(SAVE_DIR+save_name)
 
     print("Testing model...")
-    x_in, y_in = parity_batch(NB_TESTS, UPPER_BOUND) 
-    x_tst = np.reshape(x_in, (NB_TESTS, 1, UPPER_BOUND))
-    y_tst = np.reshape(y_in, (NB_TESTS, 1, 1))
+    x_in, y_in = include_batch(NB_TESTS, 
+            SEQ_LENGTH, 
+            VECTOR_SIZE, 
+            INCLUDE_PROB)  
+    
+    pred = np.zeros((NB_TESTS, 1), dtype="float32")
+    i=0
+    for x_seq, y_seq in zip(x_in, y_in):
+        print("Testing sequence ", i,"/", NB_TESTS)
+        i += 1
+        previous = np.zeros(shape=(1, 1), dtype="float32")
+        for x in x_seq :
+            x = np.reshape(x, (1, VECTOR_SIZE))
+            v = np.concatenate((previous, x), axis=1)
+            previous = model.predict(v) 
+        x = np.reshape(x_seq[-1], (1, VECTOR_SIZE))
+        v = np.concatenate((previous, x), axis=1)
+        pred[i-1] = previous[0, 0]
  
-    pre = model.predict(x_tst)
-    pre = [p > 0.5 for p in pre]
-    res = [p > 0.5 for p in y_tst]
-    ok = sum([1 for x, y in zip(pre, res) if x == y  ])
+    pred = [p > 0.5 for p in pred]
+    res = [p > 0.5 for p in y_in]
+    ok = sum([1 for x, y in zip(pred, res) if x == y  ])
     print("Nb tests:   ", NB_TESTS)
     print("Nb success: ", ok)
 
