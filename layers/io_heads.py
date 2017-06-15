@@ -6,11 +6,11 @@ from keras.engine.topology import Layer
 from keras.layers import *
 
 
-class IO_Heads(Layer):
-    def __init__(self, memory_size, vector_size, output_size, **kwargs):
+class IO_Heads(Recurrent):
+    def __init__(self, units, memory_size, vector_size, **kwargs):
         print("Initialisating IO_Heads...")
         self.memory_size = memory_size
-        self.output_size = output_size
+        self.units = units
         self.vect_size = vector_size
         super(IO_Heads, self).__init__(**kwargs)
 
@@ -22,18 +22,31 @@ class IO_Heads(Layer):
                 trainable=False,
                 name="MEMORY")
 
-        self.memory.eval(K.get_session())
-    
-        self.build = True
+        self.generator = self.add_weight(
+                shape=(self.vect_size*2, 
+                    self.vect_size*3+self.memory_size),
+                initializer='uniform',
+                trainable=True,
+                name="Generator")
 
-    def call(self, x):
+        self.post_treatment = self.add_weight(
+                shape=(self.vect_size*2, self.units),
+                initializer='uniform',
+                trainable=True,
+                name="PostTreatment")
+
+        self.memory.eval(K.get_session())
+        print(self.vect_size)
+        self.states = [None, tf.constant(0.1, shape=(self.vect_size,))]
+        self.built = True
+
+    def step(self, inputs, states):
         def dist(x, y):
             p = tf.matmul(x, tf.reshape(y, shape=(self.vect_size,1)))
             nx = tf.norm(x)
             ny = tf.norm(y)
             d = tf.divide(p, tf.multiply(nx, ny))
             d = tf.reshape(d, ())
-            print("d: ", d)
             l = tf.constant([1000.], shape=())
             return tf.minimum(d, l)
 
@@ -60,7 +73,12 @@ class IO_Heads(Layer):
         print("Calling IO_Head...")
         vs = self.vect_size
         ms = self.memory_size
-        r_vect, w_weight, w_vect, erase = tf.split(x, 
+        print("States: ", states)
+        print("Input: ", inputs)
+        entry = tf.concat([inputs, states[1]], axis=1)
+        gen = tf.matmul(self.generator, entry)
+
+        r_vect, w_weight, w_vect, erase = tf.split(inputs, 
                 [vs, ms, vs, vs], axis=1)
         r_weight = focus_by_content(r_vect)
 
@@ -69,30 +87,20 @@ class IO_Heads(Layer):
 
         print("Reading...")
         read = read_mem(r_weight)
+        post = tf.concat([inputs, read], axis=1)
+        
+        res = tf.matmul(post, self.post_treatment)
 
-        #  res = tf.concat([x, read], axis=1)
-        print("Returning: ", read)
-        return read
+        print("Returning: ", res)
+        print("Read: ", read)
+        return res, [res, read]
 
-    def compute_output_shape(self, input_shape):
-        print("Computing output shape...")
-        print("Shape: ", (1, self.vect_size))
-        return ((1, self.vect_size))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    def get_config(self):
+        config = {
+                'memory_size': self.memory_size, 
+                'units': self.units,
+                'vector_size': self.vect_size
+        }
+        base_config = super(IO_Heads, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
