@@ -6,7 +6,7 @@ def build_RNN(input_shape, memory_size, vect_size, output_size):
     model = Sequential()
     model.add(IO_Heads(memory_size=memory_size, 
         vector_size=vect_size, 
-        units=output_size,
-        input_shape=input_shape))
-    # model.add(Dense(1, activation='sigmoid'))
+        input_shape=input_shape,
+        return_sequences=True))
+    model.add(Dense(1, activation='sigmoid'))
     return model
