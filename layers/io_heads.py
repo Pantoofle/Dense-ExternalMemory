@@ -7,10 +7,10 @@ from keras.layers import *
 
 
 class IO_Heads(Recurrent):
-    def __init__(self, units, memory_size, vector_size, **kwargs):
+    def __init__(self, memory_size, vector_size, **kwargs):
         print("Initialisating IO_Heads...")
         self.memory_size = memory_size
-        self.units = units
+        self.units = vector_size
         self.vect_size = vector_size
         super(IO_Heads, self).__init__(**kwargs)
 
@@ -30,14 +30,13 @@ class IO_Heads(Recurrent):
                 name="Generator")
 
         self.post_treatment = self.add_weight(
-                shape=(self.vect_size*2, self.units),
-                initializer='uniform',
-                trainable=True,
-                name="PostTreatment")
+               shape=(self.vect_size*2, self.units),
+               initializer='uniform',
+               trainable=True,
+               name="PostTreatment")
 
         self.memory.eval(K.get_session())
-        print(self.vect_size)
-        self.states = [None, tf.constant(0.1, shape=(self.vect_size,))]
+        self.states = [None]
         self.built = True
 
     def step(self, inputs, states):
@@ -71,14 +70,18 @@ class IO_Heads(Recurrent):
             self.memory = tf.add(self.memory, adder)
 
         print("Calling IO_Head...")
+
+        if states[0] is None:
+            states[0] = tf.constant(0.1, shape=(1, self.vect_size))
+            self.memory = tf.constant(0.1, shape=(self.memory_size, self.vect_size))
+
         vs = self.vect_size
         ms = self.memory_size
-        print("States: ", states)
-        print("Input: ", inputs)
-        entry = tf.concat([inputs, states[1]], axis=1)
-        gen = tf.matmul(self.generator, entry)
-
-        r_vect, w_weight, w_vect, erase = tf.split(inputs, 
+        inputs=tf.reshape(inputs[0], (1, self.vect_size))
+        stat = tf.reshape(states[0][0], (1, self.vect_size))
+        entry = tf.concat([inputs, stat], axis=1)
+        gen = tf.matmul(entry, self.generator)
+        r_vect, w_weight, w_vect, erase = tf.split(gen, 
                 [vs, ms, vs, vs], axis=1)
         r_weight = focus_by_content(r_vect)
 
@@ -88,17 +91,12 @@ class IO_Heads(Recurrent):
         print("Reading...")
         read = read_mem(r_weight)
         post = tf.concat([inputs, read], axis=1)
-        
-        res = tf.matmul(post, self.post_treatment)
-
-        print("Returning: ", res)
-        print("Read: ", read)
-        return res, [res, read]
+        ret = tf.matmul(post, self.post_treatment)
+        return ret, [ret]
 
     def get_config(self):
         config = {
                 'memory_size': self.memory_size, 
-                'units': self.units,
                 'vector_size': self.vect_size
         }
         base_config = super(IO_Heads, self).get_config()
