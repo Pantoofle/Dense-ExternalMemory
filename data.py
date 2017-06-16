@@ -16,13 +16,13 @@ def parity_batch(nb_tests, upper_bound):
 
 def include_batch(nb_tests, seq_size, vect_size):
     x = np.zeros((nb_tests, seq_size, vect_size), dtype="float32")
-    y = np.zeros((nb_tests, seq_size), dtype="float32")
+    y = np.zeros((nb_tests, seq_size, 1), dtype="float32")
 
     for i in range(nb_tests):
         n = np.random.random_integers(vect_size, size=(seq_size,))-1
         for j in range(seq_size):
             x[i, j, n[j]] = 1.
             if n[j] in n[:j]:
-                y[i, j] = 1.
+                y[i, j, 0] = 1.
 
     return x, y
