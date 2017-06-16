@@ -7,27 +7,37 @@ from keras.layers import *
 
 
 class IO_Heads(Recurrent):
-    def __init__(self, memory_size, vector_size, **kwargs):
+    def __init__(self, memory_size, vector_size, depth, **kwargs):
         print("Initialisating IO_Heads...")
         self.memory_size = memory_size
         self.units = vector_size
         self.vect_size = vector_size
+        self.depth = depth
         super(IO_Heads, self).__init__(**kwargs)
 
     def build(self, input_shape):
         print("Building IO_Heads...")
         self.memory = self.add_weight(
                 shape=(self.memory_size, self.vect_size),
-                initializer=initializers.constant(0.1),
+                initializer="uniform",
                 trainable=False,
                 name="MEMORY")
-
-        self.generator = self.add_weight(
+        
+        self.initiator = self.add_weight(
                 shape=(self.vect_size*2, 
                     self.vect_size*3+self.memory_size),
                 initializer='uniform',
                 trainable=True,
-                name="Generator")
+                name="Initiator")
+
+        self.generators = []
+        for i in range(self.depth):
+            self.generators.append(self.add_weight(
+                shape=(self.vect_size*3+self.memory_size, 
+                    self.vect_size*3+self.memory_size),
+                initializer='uniform',
+                trainable=True,
+                name="Generator-"+str(i)))
 
         self.post_treatment = self.add_weight(
                shape=(self.vect_size*2, self.units),
@@ -41,18 +51,23 @@ class IO_Heads(Recurrent):
 
     def step(self, inputs, states):
         def dist(x, y):
-            p = tf.matmul(x, tf.reshape(y, shape=(self.vect_size,1)))
-            nx = tf.norm(x)
-            ny = tf.norm(y)
-            d = tf.divide(p, tf.multiply(nx, ny))
-            d = tf.reshape(d, ())
-            l = tf.constant([1000.], shape=())
-            return tf.minimum(d, l)
+           diff = tf.norm(tf.subtract(x, y))
+           return diff
 
+            #  p = tf.matmul(x, tf.reshape(y, shape=(self.vect_size,1)))
+            #  nx = tf.norm(x)
+            #  ny = tf.norm(y)
+            #
+            #  d = tf.divide(p, tf.multiply(nx, ny))
+            #  d = tf.reshape(d, ())
+            #  l = tf.constant(1000.)
+            #  return tf.minimum(d, l)
+            #
         def focus_by_content(x):
             x = tf.reshape(x, (1, self.vect_size))
             dists = tf.map_fn(lambda y: dist(x, y), self.memory)
             tot = tf.reduce_sum(dists, axis=0)
+            tot = tf.maximum(tot, tf.constant(0.001))
             return tf.divide(dists, tot)
 
         def read_mem(weight):
@@ -72,16 +87,23 @@ class IO_Heads(Recurrent):
         print("Calling IO_Head...")
 
         if states[0] is None:
-            states[0] = tf.constant(0.1, shape=(1, self.vect_size))
-            self.memory = tf.constant(0.1, shape=(self.memory_size, self.vect_size))
+            print("Reseting memory")
+            states[0] = tf.constant(0., shape=(1, self.vect_size))
+            self.memory = tf.constant(np.random.random((slef.memory_size, self.vect_size)))
 
         vs = self.vect_size
         ms = self.memory_size
         inputs=tf.reshape(inputs[0], (1, self.vect_size))
         stat = tf.reshape(states[0][0], (1, self.vect_size))
+        
         entry = tf.concat([inputs, stat], axis=1)
-        gen = tf.matmul(entry, self.generator)
-        r_vect, w_weight, w_vect, erase = tf.split(gen, 
+        
+        start = tf.matmul(entry, self.initiator)
+
+        for i in range(self.depth):
+            start = tf.matmul(start, self.generators[i])
+
+        r_vect, w_weight, w_vect, erase = tf.split(start, 
                 [vs, ms, vs, vs], axis=1)
         r_weight = focus_by_content(r_vect)
 
@@ -97,7 +119,8 @@ class IO_Heads(Recurrent):
     def get_config(self):
         config = {
                 'memory_size': self.memory_size, 
-                'vector_size': self.vect_size
+                'vector_size': self.vect_size,
+                'depth'      : self.depth
         }
         base_config = super(IO_Heads, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
