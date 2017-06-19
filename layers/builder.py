@@ -15,4 +15,5 @@ def build_RNN(input_shape, memory_size, vect_size, output_size, depth):
 def build_LSTM(input_shape, vect_size, output_size):
     model = Sequential()
     model.add(LSTM(output_size, input_shape=input_shape, return_sequences=True))
+    model.add(Dense(output_size, activation='softmax'))
     return model

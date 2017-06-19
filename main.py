@@ -9,15 +9,14 @@ from data import *
 
 VECTOR_SIZE=2
 MEMORY_SIZE=7
-SEQ_LENGTH=2
+SEQ_LENGTH=3
 DEPTH=0
-INCLUDE_PROB=0.5
 
-NB_TRAIN=100
-NB_TESTS=10
+NB_TRAIN=50000
+NB_TESTS=100
 
 BATCH_SIZE=100
-NB_EPOCH=10
+NB_EPOCH=100
 
 SAVE_DIR="models/"
 
@@ -50,7 +49,7 @@ if __name__ == "__main__":
         save_name_lstm+=".h5"
 
     print("Compiling...")
-    model_mem.compile(optimizer='sgd',
+    model_mem.compile(optimizer='rmsprop',
                   loss='mean_squared_error',
                   metrics=['accuracy'])
     
@@ -74,17 +73,17 @@ if __name__ == "__main__":
     checkpoint_lstm = ModelCheckpoint(SAVE_DIR+save_name_lstm)
 
 
-    #  print("Training LSTM...")
-    #  model_lstm.fit(x_in, y_in,
-    #          batch_size=BATCH_SIZE,
-    #          epochs=NB_EPOCH,
-    #          callbacks=[checkpoint_lstm])
-
-    print("Training Mem...")
-    model_mem.fit(x_in, y_in,
+    print("Training LSTM...")
+    model_lstm.fit(x_in, y_in,
             batch_size=BATCH_SIZE,
             epochs=NB_EPOCH,
-            callbacks=[checkpoint_mem])
+            callbacks=[checkpoint_lstm])
+    #
+    #  print("Training Mem...")
+    #  model_mem.fit(x_in, y_in,
+    #          batch_size=BATCH_SIZE,
+    #          epochs=NB_EPOCH,
+    #          callbacks=[checkpoint_mem])
 
     print("Saving models...")
     model_lstm.save(SAVE_DIR+save_name_lstm)
@@ -99,9 +98,9 @@ if __name__ == "__main__":
     pred = model_lstm.predict(x_in)
 
 
-#  print("Questions: ", x_in)
-    #  print("Solution: ", y_in)
-    #  print("Predictions: ", pred)
+    print("Questions: ", x_in)
+    print("Solution: ", y_in)
+    print("Predictions: ", pred)
     pred = [[p > 0.5 for p in seq] for seq in pred]
     solu = [[p > 0.5 for p in seq] for seq in y_in]
     total = 0
@@ -123,21 +122,18 @@ if __name__ == "__main__":
     print("Saving Last memory state...")
     I= model_mem.layers[0].get_weights()[-1]
 
-    from matplotlib.pyplot import Image
-    mem = (((I - I.min()) / (I.max() - I.min())) * 255.9).astype(np.uint8)
-    img = Image.fromarray(mem)
-    img.save('memory.bmp')
+    import matplotlib.pyplot as plt
 
-    I = x_in[-1]
-    xin = (((I - I.min()) / (I.max() - I.min())) * 255.9).astype(np.uint8)
-    img = Image.fromarray(mem)
-    img.save('entry.bmp')
+    plt.figure(1)
+    plt.subplot(211)
+    plt.imshow(I)
+    plt.subplot(212)
+    plt.imshow(np.reshape(x_in[-1], (SEQ_LENGTH, VECTOR_SIZE)))
+    plt.savefig("entry.png")
 
-
-
-    print("Questions: ", x_in)
-    print("Solution: ", y_in)
-    print("Predictions: ", pred)
+    #  print("Questions: ", x_in)
+    #  print("Solution: ", y_in)
+    #  print("Predictions: ", pred)
     
     pred = [[p > 0.5 for p in seq] for seq in pred]
     solu = [[p > 0.5 for p in seq] for seq in y_in]

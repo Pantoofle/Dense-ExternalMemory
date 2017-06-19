@@ -85,11 +85,10 @@ class IO_Heads(Recurrent):
             self.memory = tf.add(self.memory, adder)
 
         print("Calling IO_Head...")
-
-        if states[0] is None:
+        if self.states[0] is None:
             print("Reseting memory")
-            states[0] = tf.constant(0., shape=(1, self.vect_size))
-            self.memory = tf.constant(np.random.random((slef.memory_size, self.vect_size)))
+            self.memory = tf.random_uniform((self.memory_size, self.vect_size), 0, 1,  dtype="float32")
+            self.states[0] = tf.constant(0., shape=[1, self.vect_size], dtype="float32")
 
         vs = self.vect_size
         ms = self.memory_size
