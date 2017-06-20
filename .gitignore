@@ -1,6 +1,11 @@
 # The models
 *.h5
 
+# The images
+*.jpg
+*.bmp
+*.png
+
 # The logs
 logs/
 
