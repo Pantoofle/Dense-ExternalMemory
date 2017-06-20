@@ -4,152 +4,159 @@ import sys
 sys.path.append("layers/")
 
 from keras.callbacks import *
+import keras.layers
 from builder import *
 from data import *
 
-VECTOR_SIZE=2
-MEMORY_SIZE=7
-SEQ_LENGTH=3
+VECTOR_SIZE=3
+MEMORY_SIZE=10
+SEQ_LENGTH=5
 DEPTH=0
 
-NB_TRAIN=50000
+NB_TRAIN=1000
 NB_TESTS=100
 
-BATCH_SIZE=100
-NB_EPOCH=100
+BATCH_SIZE=1
+NB_EPOCH=10
 
 SAVE_DIR="models/"
 
 if __name__ == "__main__":
     print("Starting process...")
-
-    if(len(sys.argv) > 3 and sys.argv[1] == "load"):
-        print("Loading model...")
-        model_mem = load_model(SAVE_DIR+sys.argv[2]+".h5", 
-                {'IO_Heads': IO_Heads})
-        save_name_mem = sys.argv[2]+".h5"
-        model_lstm = load_model(SAVE_DIR+sys.argv[3]+".h5") 
-        save_name_lstm = sys.argv[3]+"h5"
-
-    else:
-        print("Building new model...")
-        model_mem = build_RNN(input_shape=(SEQ_LENGTH, VECTOR_SIZE), 
-                memory_size=MEMORY_SIZE, 
-                vect_size=VECTOR_SIZE, 
-                output_size=1,
-                depth=DEPTH)
-
-        model_lstm =  build_LSTM(input_shape=(SEQ_LENGTH, VECTOR_SIZE),
-            vect_size=VECTOR_SIZE,
-            output_size=1)
-
-        save_name_mem = input("Enter Memory model name: ")
-        save_name_lstm = input("Enter LSTM model name: ")
-        save_name_mem+= ".h5"
-        save_name_lstm+=".h5"
-
-    print("Compiling...")
-    model_mem.compile(optimizer='rmsprop',
-                  loss='mean_squared_error',
-                  metrics=['accuracy'])
-    
-    model_lstm.compile(optimizer='rmsprop',
-                  loss='mean_squared_error',
-                  metrics=['accuracy'])
-    
-    model_mem.summary() 
-    model_lstm.summary()
-
     print("Getting data...")
     x_in, y_in = include_batch(NB_TRAIN, 
             SEQ_LENGTH, 
             VECTOR_SIZE)
     
-    print("Saving models...")
-    model_mem.save(SAVE_DIR+save_name_mem)
-    checkpoint_mem = ModelCheckpoint(SAVE_DIR+save_name_mem)
+    print("Building the first layer...")
+    inputs = Input(shape=(SEQ_LENGTH, VECTOR_SIZE))
+    densed = Dense(MEMORY_SIZE+1, name="Generator")(inputs)
+    concat = keras.layers.concatenate([inputs, densed])
+    inter = Model(inputs=inputs, outputs=concat)
+
+    path = input("Path where to load the first layer: ")
+    print("Loading model...")
+    inter = load_model(SAVE_DIR+path+".h5",
+            {'IO_Heads': IO_Heads})
+
+    print("Compiling the first layer...")
+    inter.compile(optimizer='sgd',
+                  loss='mean_squared_error',
+                  metrics=['accuracy'])
+ 
+
+    path = input("Path where to load/save the model: ")
+   
+    print("Building the rest of the layer...")
+    memory = IO_Heads(memory_size=MEMORY_SIZE, 
+        vector_size=VECTOR_SIZE, 
+        output_size=VECTOR_SIZE,
+        return_sequences=True,
+        name="MAIN")(concat)
     
-    model_lstm.save(SAVE_DIR+save_name_lstm)
-    checkpoint_lstm = ModelCheckpoint(SAVE_DIR+save_name_lstm)
+    print("Memory: ", memory)
+    read = Lambda(lambda x: x[:, :, :3])(memory)
+    mem  = Lambda(lambda x: x[:, :, 3:])(memory)
 
+    concat2 = keras.layers.concatenate([inputs, read], axis=-1)
 
-    print("Training LSTM...")
-    model_lstm.fit(x_in, y_in,
+    post = Dense(1, activation="sigmoid")(concat2)
+    
+    model = Model(inputs=inputs, outputs=post)
+
+    if len(sys.argv) > 2 and sys.argv[2]=="load":
+        print("Loading the full layer...")
+        model = load_model(SAVE_DIR+path+".h5",
+                {'IO_Heads': IO_Heads})
+
+    save_model(model, SAVE_DIR+path+".h5")
+
+    model.get_layer("Generator").trainable=False
+    
+    print("Compiling second layer...")
+    model.compile(optimizer='sgd',
+                  loss='mean_squared_error',
+                  metrics=['accuracy'])
+   
+    model.summary()
+    print("Training second layer...")
+    model.fit(x_in, y_in,
             batch_size=BATCH_SIZE,
-            epochs=NB_EPOCH,
-            callbacks=[checkpoint_lstm])
-    #
-    #  print("Training Mem...")
-    #  model_mem.fit(x_in, y_in,
-    #          batch_size=BATCH_SIZE,
-    #          epochs=NB_EPOCH,
-    #          callbacks=[checkpoint_mem])
+            epochs=NB_EPOCH)
 
-    print("Saving models...")
-    model_lstm.save(SAVE_DIR+save_name_lstm)
-    model_mem.save(SAVE_DIR+save_name_mem)
-    
-    print("Testing models...")
+    print("Saving the full model...")
+    save_model(model, SAVE_DIR+path+".h5")
+   
+
+    print("Testing first layer...")
+    x_layer1, y_layer1= memory_batch(NB_TESTS,
+            SEQ_LENGTH,
+            VECTOR_SIZE,
+            MEMORY_SIZE)
+
     x_in, y_in = include_batch(NB_TESTS, 
-            SEQ_LENGTH, 
-            VECTOR_SIZE)  
+            SEQ_LENGTH,
+            VECTOR_SIZE)
+
+    inter_pred = inter.predict(x_layer1,
+            batch_size=BATCH_SIZE)
+
+    print("Generating memory...")
+    mem_watcher = Model(inputs=inputs, outputs=mem)
+    mem_watcher.compile(optimizer='sgd',
+                  loss='mean_squared_error',
+                  metrics=['accuracy'])
+    mem_img = mem_watcher.predict(x_in)
+    print("mem_img: ", mem_img.shape)
+
+    print("Testing Full model...")
+    model_pred = model.predict(x_in,
+            batch_size=BATCH_SIZE)
+
+    sol = y_in.flatten()
+    pred = model_pred.flatten()
+    tot = 0
+    for i, x in enumerate(pred):
+        if x > 0.5:
+            if sol[i] == 1.:
+                tot += 1
+        else:
+            if sol[i] == 0.:
+                tot += 1
+    print("Score: ", tot, "/", len(sol))
+
     
-    print("LSTM...")
-    pred = model_lstm.predict(x_in)
-
-
-    print("Questions: ", x_in)
-    print("Solution: ", y_in)
-    print("Predictions: ", pred)
-    pred = [[p > 0.5 for p in seq] for seq in pred]
-    solu = [[p > 0.5 for p in seq] for seq in y_in]
-    total = 0
     
-    #  print("Pred: ", pred)
-    #  print("Solu: ", solu)
-
-    for i, p in enumerate(pred):
-        ok = sum([1 for x, y in zip(p, solu[i]) if x == y  ])
-        total += ok
-        # print("Sequence ", i+1, ": ", ok, " / ", SEQ_LENGTH )
-    print("Nb sequences: ", NB_TESTS)
-    print("Nb tests in each sequence: ", SEQ_LENGTH)
-    print("Nb success: ", total, " / ", NB_TESTS*SEQ_LENGTH )
-
-    print("\nMem...")
-    pred = model_mem.predict(x_in)
-
-    print("Saving Last memory state...")
-    I= model_mem.layers[0].get_weights()[-1]
-
     import matplotlib.pyplot as plt
-
     plt.figure(1)
     plt.subplot(211)
-    plt.imshow(I)
+    plt.imshow(inter_pred[-1])
     plt.subplot(212)
-    plt.imshow(np.reshape(x_in[-1], (SEQ_LENGTH, VECTOR_SIZE)))
-    plt.savefig("entry.png")
+    plt.imshow(y_layer1[-1])
+    plt.savefig("inter.png")
 
-    #  print("Questions: ", x_in)
-    #  print("Solution: ", y_in)
-    #  print("Predictions: ", pred)
-    
-    pred = [[p > 0.5 for p in seq] for seq in pred]
-    solu = [[p > 0.5 for p in seq] for seq in y_in]
-    total = 0
+    plt.clf()
+    plt.figure(1)
+    plt.subplot(211)
+    plt.imshow(model_pred[-1])
+    plt.subplot(212)
+    plt.imshow(y_in[-1])
+    plt.savefig("out.png")
 
-    # print("Pred: ", pred)
-    # print("Solu: ", solu)
+    plt.clf()
+    plt.figure(1)
+    plt.subplot(151)
+    plt.imshow(mem_img[-1][-5].reshape((MEMORY_SIZE, VECTOR_SIZE)))
+    plt.subplot(152)
+    plt.imshow(mem_img[-1][-4].reshape((MEMORY_SIZE, VECTOR_SIZE)))
+    plt.subplot(153)
+    plt.imshow(mem_img[-1][-3].reshape((MEMORY_SIZE, VECTOR_SIZE)))
+    plt.subplot(154)
+    plt.imshow(mem_img[-1][-3].reshape((MEMORY_SIZE, VECTOR_SIZE)))
+    plt.subplot(155)
+    plt.imshow(mem_img[-1][-1].reshape((MEMORY_SIZE, VECTOR_SIZE)))
 
-    for i, p in enumerate(pred):
-        ok = sum([1 for x, y in zip(p, solu[i]) if x == y  ])
-        total += ok
-        # print("Sequence ", i+1, ": ", ok, " / ", SEQ_LENGTH )
-    print("Nb sequences: ", NB_TESTS)
-    print("Nb tests in each sequence: ", SEQ_LENGTH)
-    print("Nb success: ", total, " / ", NB_TESTS*SEQ_LENGTH )
-
+    plt.savefig("memory.png") 
 
 
 
