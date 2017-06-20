@@ -26,3 +26,18 @@ def include_batch(nb_tests, seq_size, vect_size):
                 y[i, j, 0] = 1.
 
     return x, y
+
+
+def memory_batch(nb_tests, seq_size, vect_size, memory_size):
+    x = np.zeros((nb_tests, seq_size, vect_size), dtype="float32")
+    y = np.zeros((nb_tests, seq_size, vect_size+memory_size+1), 
+            dtype="float32")
+    for i in range(nb_tests):
+        n = np.random.random_integers(vect_size, size=(seq_size,))-1
+        for j in range(seq_size):
+            x[i, j, n[j]] = 1.
+            y[i, j, n[j]+vect_size] = 1.
+            y[i, j, n[j]] = 1.
+    return x, y
+
+
