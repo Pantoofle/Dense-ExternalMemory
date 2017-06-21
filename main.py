@@ -10,14 +10,14 @@ from data import *
 
 VECTOR_SIZE=3
 MEMORY_SIZE=10
-SEQ_LENGTH=5
+SEQ_LENGTH=4
 DEPTH=0
 
-NB_TRAIN=1000
-NB_TESTS=100
+NB_TRAIN=5000
+NB_TESTS=1
 
 BATCH_SIZE=1
-NB_EPOCH=10
+NB_EPOCH=25
 
 SAVE_DIR="models/"
 
@@ -35,9 +35,10 @@ if __name__ == "__main__":
     inter = Model(inputs=inputs, outputs=concat)
 
     path = input("Path where to load the first layer: ")
+    if path == "": 
+        path = "inter"
     print("Loading model...")
-    inter = load_model(SAVE_DIR+path+".h5",
-            {'IO_Heads': IO_Heads})
+    inter.load_weights(SAVE_DIR+path+".h5")
 
     print("Compiling the first layer...")
     inter.compile(optimizer='sgd',
@@ -46,7 +47,8 @@ if __name__ == "__main__":
  
 
     path = input("Path where to load/save the model: ")
-   
+    if path == "":
+        path = "full"
     print("Building the rest of the layer...")
     memory = IO_Heads(memory_size=MEMORY_SIZE, 
         vector_size=VECTOR_SIZE, 
@@ -69,7 +71,7 @@ if __name__ == "__main__":
         model = load_model(SAVE_DIR+path+".h5",
                 {'IO_Heads': IO_Heads})
 
-    save_model(model, SAVE_DIR+path+".h5")
+    model.save_weights(SAVE_DIR+path+".h5")
 
     model.get_layer("Generator").trainable=False
     
@@ -79,26 +81,27 @@ if __name__ == "__main__":
                   metrics=['accuracy'])
    
     model.summary()
-    print("Training second layer...")
-    model.fit(x_in, y_in,
-            batch_size=BATCH_SIZE,
-            epochs=NB_EPOCH)
 
-    print("Saving the full model...")
-    save_model(model, SAVE_DIR+path+".h5")
-   
+    if not(len(sys.argv) > 1 and sys.argv[1] == "notrain"):
+        print("Training second layer...")
+        model.fit(x_in, y_in,
+                batch_size=BATCH_SIZE,
+                epochs=NB_EPOCH,
+                callbacks=[EarlyStopping(monitor='loss', min_delta=0.01)])
 
-    print("Testing first layer...")
-    x_layer1, y_layer1= memory_batch(NB_TESTS,
-            SEQ_LENGTH,
-            VECTOR_SIZE,
-            MEMORY_SIZE)
+        print("Saving the full model...")
+        save_model(model, SAVE_DIR+path+".h5")
 
     x_in, y_in = include_batch(NB_TESTS, 
             SEQ_LENGTH,
             VECTOR_SIZE)
 
-    inter_pred = inter.predict(x_layer1,
+    print("Testing Full model...")
+    model_pred = model.predict(x_in,
+            batch_size=BATCH_SIZE)
+    
+    print("Generating intermediate output")
+    inter_pred = inter.predict(x_in,
             batch_size=BATCH_SIZE)
 
     print("Generating memory...")
@@ -107,12 +110,15 @@ if __name__ == "__main__":
                   loss='mean_squared_error',
                   metrics=['accuracy'])
     mem_img = mem_watcher.predict(x_in)
-    print("mem_img: ", mem_img.shape)
 
-    print("Testing Full model...")
-    model_pred = model.predict(x_in,
-            batch_size=BATCH_SIZE)
+    print("Generating last output...")
+    comp = Model(inputs=inputs, outputs=concat2)
+    comp.compile(optimizer='sgd',
+                  loss='mean_squared_error',
+                  metrics=['accuracy'])
+    concaten = comp.predict(x_in)
 
+    print("Counting results")
     sol = y_in.flatten()
     pred = model_pred.flatten()
     tot = 0
@@ -125,38 +131,31 @@ if __name__ == "__main__":
                 tot += 1
     print("Score: ", tot, "/", len(sol))
 
-    
-    
+    print("In: ", x_in)
+    print("Out: ", y_in)
     import matplotlib.pyplot as plt
     plt.figure(1)
-    plt.subplot(211)
+    plt.subplot(245)
+    plt.imshow(concaten[-1][-4].reshape(1, 2*VECTOR_SIZE))
+    plt.subplot(246)
+    plt.imshow(concaten[-1][-3].reshape(1, 2*VECTOR_SIZE))
+    plt.subplot(247)
+    plt.imshow(concaten[-1][-2].reshape(1, 2*VECTOR_SIZE))
+    plt.subplot(248)
+    plt.imshow(concaten[-1][-1].reshape(1, 2*VECTOR_SIZE))
+
+    plt.subplot(241)
+    plt.imshow(mem_img[-1][-4].reshape((MEMORY_SIZE, VECTOR_SIZE+2)))
+    plt.subplot(242)
+    plt.imshow(mem_img[-1][-3].reshape((MEMORY_SIZE, VECTOR_SIZE+2)))
+    plt.subplot(243)
+    plt.imshow(mem_img[-1][-2].reshape((MEMORY_SIZE, VECTOR_SIZE+2)))
+    plt.subplot(244)
+    plt.imshow(mem_img[-1][-1].reshape((MEMORY_SIZE, VECTOR_SIZE+2)))
+
+    plt.savefig("img/memory.png")
+
+    plt.clf()
+    plt.figure(1)
     plt.imshow(inter_pred[-1])
-    plt.subplot(212)
-    plt.imshow(y_layer1[-1])
-    plt.savefig("inter.png")
-
-    plt.clf()
-    plt.figure(1)
-    plt.subplot(211)
-    plt.imshow(model_pred[-1])
-    plt.subplot(212)
-    plt.imshow(y_in[-1])
-    plt.savefig("out.png")
-
-    plt.clf()
-    plt.figure(1)
-    plt.subplot(151)
-    plt.imshow(mem_img[-1][-5].reshape((MEMORY_SIZE, VECTOR_SIZE)))
-    plt.subplot(152)
-    plt.imshow(mem_img[-1][-4].reshape((MEMORY_SIZE, VECTOR_SIZE)))
-    plt.subplot(153)
-    plt.imshow(mem_img[-1][-3].reshape((MEMORY_SIZE, VECTOR_SIZE)))
-    plt.subplot(154)
-    plt.imshow(mem_img[-1][-3].reshape((MEMORY_SIZE, VECTOR_SIZE)))
-    plt.subplot(155)
-    plt.imshow(mem_img[-1][-1].reshape((MEMORY_SIZE, VECTOR_SIZE)))
-
-    plt.savefig("memory.png") 
-
-
-
+    plt.savefig("img/inter.png")
