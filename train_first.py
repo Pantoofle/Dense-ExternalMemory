@@ -44,29 +44,8 @@ if __name__ == "__main__":
             epochs=NB_EPOCH,
             callbacks=[keras.callbacks.EarlyStopping(
                 monitor='loss', min_delta=0.0001)])
-    save_model(inter, SAVE_DIR+path+".h5")
+    inter.save_weights(SAVE_DIR+path+".h5")
  
-    print("Testing first layer...")
-    x_layer1, y_layer1= memory_batch(NB_TESTS,
-            SEQ_LENGTH,
-            VECTOR_SIZE,
-            MEMORY_SIZE)
-
-    inter_eval = inter.evaluate(x_layer1, y_layer1,
-            batch_size=BATCH_SIZE)
-
-    print("\nEvaluation: ", inter_eval)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
