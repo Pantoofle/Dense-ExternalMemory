@@ -23,7 +23,7 @@ class IO_Heads(Recurrent):
                 trainable=False,
                 name="MEMORY")
         self.memory.eval(K.get_session())
-        self.state_shape = (1, self.memory_size*(self.vector_size+2) +3)
+        self.state_shape = (1, self.memory_size*(self.vector_size+2) +self.vector_size)
         self.states=[tf.random_uniform(shape=self.state_shape, minval=0., maxval=0.25, dtype="float32")]
         self.seq_size=input_shape[1]
         self.built = True
