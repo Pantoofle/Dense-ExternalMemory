@@ -3,21 +3,22 @@ import sys
 
 sys.path.append("layers/")
 
+import keras
 from keras.callbacks import *
-import keras.layers
-from builder import *
+from keras.layers import * 
+from io_heads import *
 from data import *
 
-VECTOR_SIZE=100
+VECTOR_SIZE=50
 MEMORY_SIZE=1
-SEQ_LENGTH=100
+SEQ_LENGTH=50
 DEPTH=0
 
-NB_TRAIN=2000
+NB_TRAIN=200
 NB_TESTS=100
 
 BATCH_SIZE=1
-NB_EPOCH=25
+NB_EPOCH=50
 
 SAVE_DIR="models/"
 
@@ -86,8 +87,11 @@ if __name__ == "__main__":
         model.fit(x_in, y_in,
                 batch_size=BATCH_SIZE,
                 epochs=NB_EPOCH,
-                callbacks=[EarlyStopping(monitor='loss', min_delta=0.01, 
-                    patience = 3)])
+                callbacks=[
+                    EarlyStopping(monitor='acc', min_delta=0.01, patience = 15),
+                    TensorBoard(log_dir='./logs', histogram_freq=1, 
+                        write_graph=True, 
+                        write_images=False)])
 
         print("Saving the full model...")
         save_model(model, SAVE_DIR+path+".h5")
@@ -131,7 +135,8 @@ if __name__ == "__main__":
         else:
             if sol[i] == 0.:
                 tot += 1
-    print("Score: ", tot, "/", len(sol))
+    theoretical = (VECTOR_SIZE/SEQ_LENGTH)*(1.- (1.-1./VECTOR_SIZE)**SEQ_LENGTH)
+    print("Score: ", tot, "/", len(sol), "(Pure random: ", theoretical*len(sol), ", ", theoretical," %)" )
 
     #  import matplotlib.pyplot as plt
     #  plt.figure(1)
