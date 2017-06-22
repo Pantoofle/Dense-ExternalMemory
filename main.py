@@ -9,16 +9,17 @@ from keras.layers import *
 from io_heads import *
 from data import *
 
-VECTOR_SIZE=30
-MEMORY_SIZE=1
-SEQ_LENGTH=100
+VECTOR_SIZE=50
+MEMORY_SIZE=2
+ENTRY_SIZE =25
+SEQ_LENGTH=50
 DEPTH=0
 
-NB_TRAIN=200
+NB_TRAIN=5000
 NB_TESTS=100
 
 BATCH_SIZE=1
-NB_EPOCH=50
+NB_EPOCH=500
 
 SAVE_DIR="models/"
 
@@ -31,37 +32,24 @@ if __name__ == "__main__":
     
     print("Building the first layer...")
     inputs = Input(shape=(SEQ_LENGTH, VECTOR_SIZE))
-    densed = Dense(MEMORY_SIZE+1, name="Generator")(inputs)
-    concat = keras.layers.concatenate([inputs, densed])
-    inter = Model(inputs=inputs, outputs=concat)
-
-    #  path = input("Path where to load the first layer: ")
-    #  if path == "":
-    #      path = "inter"
-    #  print("Loading model...")
-    #  inter.load_weights(SAVE_DIR+path+".h5")
-
-    #  print("Compiling the first layer...")
-    #  inter.compile(optimizer='sgd',
-    #                loss='mean_squared_error',
-    #                metrics=['accuracy'])
- 
+    densed = Dense(MEMORY_SIZE+ENTRY_SIZE*3, name="Generator")(inputs)
 
     path = input("Path where to load/save the model: ")
     if path == "":
         path = "full"
-    #  print("Building the rest of the layer...")
+
     memory = IO_Heads(memory_size=MEMORY_SIZE, 
-        vector_size=VECTOR_SIZE, 
-        output_size=VECTOR_SIZE,
+        entry_size=ENTRY_SIZE, 
         return_sequences=True,
-        name="MAIN")(concat)
+        name="MAIN")(densed)
     
-    read = Lambda(lambda x: x[:, :, :VECTOR_SIZE])(memory)
-    mem  = Lambda(lambda x: x[:, :, VECTOR_SIZE:])(memory)
+    # read = Lambda(lambda x: x[:, :, :VECTOR_SIZE])(memory)
+    # mem  = Lambda(lambda x: x[:, :, VECTOR_SIZE:])(memory)
+    print("mem: ", memory)
+    concat2 = keras.layers.concatenate([inputs, memory], axis=-1)
 
-    concat2 = keras.layers.concatenate([inputs, read], axis=-1)
-
+    print("inputs: ", inputs)
+    print("conc: ", concat2)
     post = Dense(1, activation="sigmoid")(concat2)
     
     model = Model(inputs=inputs, outputs=post)
@@ -73,8 +61,6 @@ if __name__ == "__main__":
 
     model.save_weights(SAVE_DIR+path+".h5")
 
-    #  model.get_layer("Generator").trainable=False
-    
     print("Compiling the model...")
     model.compile(optimizer='sgd',
                   loss='mean_squared_error',
@@ -88,10 +74,10 @@ if __name__ == "__main__":
                 batch_size=BATCH_SIZE,
                 epochs=NB_EPOCH,
                 callbacks=[
-                    EarlyStopping(monitor='acc', min_delta=0.005, patience = 20),
+                    EarlyStopping(monitor='acc', min_delta=0.005, patience = 50),
                     TensorBoard(log_dir='./logs', histogram_freq=1, 
                         write_graph=True, 
-                        write_images=False)])
+                        write_images=True)])
 
         print("Saving the full model...")
         save_model(model, SAVE_DIR+path+".h5")
@@ -103,13 +89,9 @@ if __name__ == "__main__":
     print("Testing Full model...")
     model_pred = model.predict(x_in,
             batch_size=BATCH_SIZE)
-    
-    #  print("Generating intermediate output")
-    #  inter_pred = inter.predict(x_in,
-    #          batch_size=BATCH_SIZE)
 
     print("Generating memory...")
-    mem_watcher = Model(inputs=inputs, outputs=mem)
+    mem_watcher = Model(inputs=inputs, outputs=memory)
     mem_watcher.compile(optimizer='sgd',
                   loss='mean_squared_error',
                   metrics=['accuracy'])
