@@ -9,9 +9,9 @@ from keras.layers import *
 from io_heads import *
 from data import *
 
-VECTOR_SIZE=50
+VECTOR_SIZE=30
 MEMORY_SIZE=1
-SEQ_LENGTH=50
+SEQ_LENGTH=100
 DEPTH=0
 
 NB_TRAIN=200
@@ -88,7 +88,7 @@ if __name__ == "__main__":
                 batch_size=BATCH_SIZE,
                 epochs=NB_EPOCH,
                 callbacks=[
-                    EarlyStopping(monitor='acc', min_delta=0.01, patience = 15),
+                    EarlyStopping(monitor='acc', min_delta=0.005, patience = 20),
                     TensorBoard(log_dir='./logs', histogram_freq=1, 
                         write_graph=True, 
                         write_images=False)])
