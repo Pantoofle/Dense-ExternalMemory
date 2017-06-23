@@ -9,50 +9,45 @@ from keras.layers import *
 from io_heads import *
 from data import *
 
-VECTOR_SIZE=50
-MEMORY_SIZE=2
-ENTRY_SIZE =25
-SEQ_LENGTH=50
+VECTOR_SIZE=5
+
+MEMORY_SIZE=10
+ENTRY_SIZE=20
 DEPTH=0
 
 NB_TRAIN=5000
 NB_TESTS=100
 
 BATCH_SIZE=1
-NB_EPOCH=500
+NB_EPOCH=50
 
 SAVE_DIR="models/"
 
 if __name__ == "__main__":
     print("Starting process...")
     print("Getting data...")
-    x_in, y_in = include_batch(NB_TRAIN, 
-            SEQ_LENGTH, 
-            VECTOR_SIZE)
-    
+    scalar = float(input("Spare time multiplicator: "))
+    wait, l, x_in, y_in = syracuse_batch(NB_TRAIN, VECTOR_SIZE, scalar)
+
+    print("wait, ", wait)
+    print("l, ", l)
+
+    print("x_in, ", x_in.shape)
+    print("y_in, ", y_in.shape)
+
     print("Building the first layer...")
-    inputs = Input(shape=(SEQ_LENGTH, VECTOR_SIZE))
-    densed = Dense(MEMORY_SIZE+ENTRY_SIZE*3, name="Generator")(inputs)
+    inputs = Input(shape=(wait, l))
 
     path = input("Path where to load/save the model: ")
     if path == "":
         path = "full"
 
-    memory = IO_Heads(memory_size=MEMORY_SIZE, 
-        entry_size=ENTRY_SIZE, 
-        return_sequences=True,
-        name="MAIN")(densed)
+    memory = IO_Heads(units=l,
+            memory_size=MEMORY_SIZE, 
+            entry_size=l, 
+            name="MAIN")(inputs)
     
-    # read = Lambda(lambda x: x[:, :, :VECTOR_SIZE])(memory)
-    # mem  = Lambda(lambda x: x[:, :, VECTOR_SIZE:])(memory)
-    print("mem: ", memory)
-    concat2 = keras.layers.concatenate([inputs, memory], axis=-1)
-
-    print("inputs: ", inputs)
-    print("conc: ", concat2)
-    post = Dense(1, activation="sigmoid")(concat2)
-    
-    model = Model(inputs=inputs, outputs=post)
+    model = Model(inputs=inputs, outputs=memory)
 
     if len(sys.argv) > 1 and sys.argv[1]=="load":
         print("Loading the full layer...")
@@ -62,7 +57,7 @@ if __name__ == "__main__":
     model.save_weights(SAVE_DIR+path+".h5")
 
     print("Compiling the model...")
-    model.compile(optimizer='sgd',
+    model.compile(optimizer='rmsprop',
                   loss='mean_squared_error',
                   metrics=['accuracy'])
    
@@ -73,6 +68,7 @@ if __name__ == "__main__":
         model.fit(x_in, y_in,
                 batch_size=BATCH_SIZE,
                 epochs=NB_EPOCH,
+                validation_split=0.2,
                 callbacks=[
                     EarlyStopping(monitor='acc', min_delta=0.005, patience = 50),
                     TensorBoard(log_dir='./logs', histogram_freq=1, 
@@ -82,43 +78,6 @@ if __name__ == "__main__":
         print("Saving the full model...")
         save_model(model, SAVE_DIR+path+".h5")
 
-    x_in, y_in = include_batch(NB_TESTS, 
-            SEQ_LENGTH,
-            VECTOR_SIZE)
-
-    print("Testing Full model...")
-    model_pred = model.predict(x_in,
-            batch_size=BATCH_SIZE)
-
-    print("Generating memory...")
-    mem_watcher = Model(inputs=inputs, outputs=memory)
-    mem_watcher.compile(optimizer='sgd',
-                  loss='mean_squared_error',
-                  metrics=['accuracy'])
-    mem_img = mem_watcher.predict(x_in,
-            batch_size=BATCH_SIZE)
-
-    print("Generating last output...")
-    comp = Model(inputs=inputs, outputs=concat2)
-    comp.compile(optimizer='sgd',
-                  loss='mean_squared_error',
-                  metrics=['accuracy'])
-    concaten = comp.predict(x_in,
-            batch_size=BATCH_SIZE)
-
-    print("Counting results")
-    sol = y_in.flatten()
-    pred = model_pred.flatten()
-    tot = 0
-    for i, x in enumerate(pred):
-        if x > 0.5:
-            if sol[i] == 1.:
-                tot += 1
-        else:
-            if sol[i] == 0.:
-                tot += 1
-    theoretical = (VECTOR_SIZE/SEQ_LENGTH)*(1.- (1.-1./VECTOR_SIZE)**SEQ_LENGTH)
-    print("Score: ", tot, "/", len(sol), "(Pure random: ", theoretical*len(sol), ", ", theoretical," %)" )
 
     #  import matplotlib.pyplot as plt
     #  plt.figure(1)
