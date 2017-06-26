@@ -78,3 +78,6 @@ def syracuse_batch(nb_tests, entry_size, scalar):
         x[i, 0] = e
 
     return wait, l, x, r
+
+def count_batch(nb_tests, seq_len):
+    return None

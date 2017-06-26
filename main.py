@@ -9,13 +9,15 @@ from keras.layers import *
 from io_heads import *
 from data import *
 
-VECTOR_SIZE=5
+VECTOR_SIZE=10
+SEQ_LEN=5
+MEMORY_SIZE=1
+ENTRY_SIZE=15
 
-MEMORY_SIZE=10
-ENTRY_SIZE=20
 DEPTH=0
+READ_HEADS=1
 
-NB_TRAIN=5000
+NB_TRAIN=1000
 NB_TESTS=100
 
 BATCH_SIZE=1
@@ -26,26 +28,25 @@ SAVE_DIR="models/"
 if __name__ == "__main__":
     print("Starting process...")
     print("Getting data...")
-    scalar = float(input("Spare time multiplicator: "))
-    wait, l, x_in, y_in = syracuse_batch(NB_TRAIN, VECTOR_SIZE, scalar)
-
-    print("wait, ", wait)
-    print("l, ", l)
-
-    print("x_in, ", x_in.shape)
-    print("y_in, ", y_in.shape)
+    #  scalar = float(input("Spare time multiplicator: "))
+    #  wait, l, x_in, y_in = syracuse_batch(NB_TRAIN, VECTOR_SIZE, scalar)
+    x_in, y_in = include_batch(NB_TRAIN, SEQ_LEN, VECTOR_SIZE)
 
     print("Building the first layer...")
-    inputs = Input(shape=(wait, l))
+    inputs = Input(shape=(SEQ_LEN, VECTOR_SIZE))
 
     path = input("Path where to load/save the model: ")
     if path == "":
         path = "full"
 
-    memory = IO_Heads(units=l,
+    memory = IO_Heads(units=1,
+            vector_size=VECTOR_SIZE,
             memory_size=MEMORY_SIZE, 
-            entry_size=l, 
-            name="MAIN")(inputs)
+            entry_size=ENTRY_SIZE, 
+            name="MAIN",
+            read_heads=READ_HEADS,
+            depth=DEPTH,
+            return_sequences=True)(inputs)
     
     model = Model(inputs=inputs, outputs=memory)
 
@@ -62,7 +63,8 @@ if __name__ == "__main__":
                   metrics=['accuracy'])
    
     model.summary()
-
+    print("IN: ", x_in.shape)
+    print("OUT: ", y_in.shape)
     if not(len(sys.argv) > 1 and sys.argv[1] == "notrain"):
         print("Training second layer...")
         model.fit(x_in, y_in,
@@ -70,14 +72,16 @@ if __name__ == "__main__":
                 epochs=NB_EPOCH,
                 validation_split=0.2,
                 callbacks=[
-                    EarlyStopping(monitor='acc', min_delta=0.005, patience = 50),
+                    #  EarlyStopping(monitor='val_acc', min_delta=0.005, patience = 5),
                     TensorBoard(log_dir='./logs', histogram_freq=1, 
                         write_graph=True, 
                         write_images=True)])
 
         print("Saving the full model...")
         save_model(model, SAVE_DIR+path+".h5")
-
+    
+    print("Theoretical: ", 
+            VECTOR_SIZE*1./SEQ_LEN * (1.-(1.-1./VECTOR_SIZE)**SEQ_LEN) )
 
     #  import matplotlib.pyplot as plt
     #  plt.figure(1)
