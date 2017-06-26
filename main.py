@@ -10,18 +10,18 @@ from io_heads import *
 from data import *
 
 VECTOR_SIZE=10
-SEQ_LEN=5
-MEMORY_SIZE=1
-ENTRY_SIZE=15
+SEQ_LEN=10
+MEMORY_SIZE=8
+ENTRY_SIZE=5
 
-DEPTH=0
-READ_HEADS=1
+DEPTH=3
+READ_HEADS=4
 
-NB_TRAIN=1000
+NB_TRAIN=2000
 NB_TESTS=100
 
 BATCH_SIZE=1
-NB_EPOCH=50
+NB_EPOCH=100
 
 SAVE_DIR="models/"
 
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     model.save_weights(SAVE_DIR+path+".h5")
 
     print("Compiling the model...")
-    model.compile(optimizer='rmsprop',
+    model.compile(optimizer='adam',
                   loss='mean_squared_error',
                   metrics=['accuracy'])
    

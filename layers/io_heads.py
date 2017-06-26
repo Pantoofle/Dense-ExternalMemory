@@ -45,7 +45,7 @@ class IO_Heads(Recurrent):
         self.deep_post = []
         for i in range(self.depth):
             self.deep_post.append( self.add_weight(
-                    shape = (self.units*(1+self.read_heads), self.units*(1+self.read_heads)),
+                    shape = (self.vector_size + self.read_heads*self.entry_size,self.vector_size + self.read_heads*self.entry_size),
                     initializer = "uniform",
                     trainable = True,
                     name = "DEEP_POST_"+str(i)))
