@@ -1,7 +1,5 @@
-# Dense-ExternalMemory - Dense Structure
-Neural Network with Dense structure and external memory. Goal is to study the use of memory for NN facing complex tasks
-
-Memory has shape `(mem_size, vector_size)`
+# Dense-ExternalMemory - RNN Structure - Memory size extension
+Neural Network with RNN structure and external memory. Goal is to study the use of memory for NN facing complex tasks
 
 # Dependencies
 `python 3.6`, `numpy`, `tensorflow`, `keras`

@@ -9,62 +9,46 @@ from keras.layers import *
 from io_heads import *
 from data import *
 
-VECTOR_SIZE=30
-MEMORY_SIZE=1
-SEQ_LENGTH=100
-DEPTH=0
+VECTOR_SIZE=10
+SEQ_LEN=10
+MEMORY_SIZE=8
+ENTRY_SIZE=5
 
-NB_TRAIN=200
+DEPTH=3
+READ_HEADS=4
+
+NB_TRAIN=2000
 NB_TESTS=100
 
 BATCH_SIZE=1
-NB_EPOCH=50
+NB_EPOCH=100
 
 SAVE_DIR="models/"
 
 if __name__ == "__main__":
     print("Starting process...")
     print("Getting data...")
-    x_in, y_in = include_batch(NB_TRAIN, 
-            SEQ_LENGTH, 
-            VECTOR_SIZE)
-    
+    #  scalar = float(input("Spare time multiplicator: "))
+    #  wait, l, x_in, y_in = syracuse_batch(NB_TRAIN, VECTOR_SIZE, scalar)
+    x_in, y_in = include_batch(NB_TRAIN, SEQ_LEN, VECTOR_SIZE)
+
     print("Building the first layer...")
-    inputs = Input(shape=(SEQ_LENGTH, VECTOR_SIZE))
-    densed = Dense(MEMORY_SIZE+1, name="Generator")(inputs)
-    concat = keras.layers.concatenate([inputs, densed])
-    inter = Model(inputs=inputs, outputs=concat)
-
-    #  path = input("Path where to load the first layer: ")
-    #  if path == "":
-    #      path = "inter"
-    #  print("Loading model...")
-    #  inter.load_weights(SAVE_DIR+path+".h5")
-
-    #  print("Compiling the first layer...")
-    #  inter.compile(optimizer='sgd',
-    #                loss='mean_squared_error',
-    #                metrics=['accuracy'])
- 
+    inputs = Input(shape=(SEQ_LEN, VECTOR_SIZE))
 
     path = input("Path where to load/save the model: ")
     if path == "":
         path = "full"
-    #  print("Building the rest of the layer...")
-    memory = IO_Heads(memory_size=MEMORY_SIZE, 
-        vector_size=VECTOR_SIZE, 
-        output_size=VECTOR_SIZE,
-        return_sequences=True,
-        name="MAIN")(concat)
-    
-    read = Lambda(lambda x: x[:, :, :VECTOR_SIZE])(memory)
-    mem  = Lambda(lambda x: x[:, :, VECTOR_SIZE:])(memory)
 
-    concat2 = keras.layers.concatenate([inputs, read], axis=-1)
-
-    post = Dense(1, activation="sigmoid")(concat2)
+    memory = IO_Heads(units=1,
+            vector_size=VECTOR_SIZE,
+            memory_size=MEMORY_SIZE, 
+            entry_size=ENTRY_SIZE, 
+            name="MAIN",
+            read_heads=READ_HEADS,
+            depth=DEPTH,
+            return_sequences=True)(inputs)
     
-    model = Model(inputs=inputs, outputs=post)
+    model = Model(inputs=inputs, outputs=memory)
 
     if len(sys.argv) > 1 and sys.argv[1]=="load":
         print("Loading the full layer...")
@@ -73,70 +57,31 @@ if __name__ == "__main__":
 
     model.save_weights(SAVE_DIR+path+".h5")
 
-    #  model.get_layer("Generator").trainable=False
-    
     print("Compiling the model...")
-    model.compile(optimizer='sgd',
+    model.compile(optimizer='adam',
                   loss='mean_squared_error',
                   metrics=['accuracy'])
    
     model.summary()
-
+    print("IN: ", x_in.shape)
+    print("OUT: ", y_in.shape)
     if not(len(sys.argv) > 1 and sys.argv[1] == "notrain"):
         print("Training second layer...")
         model.fit(x_in, y_in,
                 batch_size=BATCH_SIZE,
                 epochs=NB_EPOCH,
+                validation_split=0.2,
                 callbacks=[
-                    EarlyStopping(monitor='acc', min_delta=0.005, patience = 20),
+                    #  EarlyStopping(monitor='val_acc', min_delta=0.005, patience = 5),
                     TensorBoard(log_dir='./logs', histogram_freq=1, 
                         write_graph=True, 
-                        write_images=False)])
+                        write_images=True)])
 
         print("Saving the full model...")
         save_model(model, SAVE_DIR+path+".h5")
-
-    x_in, y_in = include_batch(NB_TESTS, 
-            SEQ_LENGTH,
-            VECTOR_SIZE)
-
-    print("Testing Full model...")
-    model_pred = model.predict(x_in,
-            batch_size=BATCH_SIZE)
     
-    #  print("Generating intermediate output")
-    #  inter_pred = inter.predict(x_in,
-    #          batch_size=BATCH_SIZE)
-
-    print("Generating memory...")
-    mem_watcher = Model(inputs=inputs, outputs=mem)
-    mem_watcher.compile(optimizer='sgd',
-                  loss='mean_squared_error',
-                  metrics=['accuracy'])
-    mem_img = mem_watcher.predict(x_in,
-            batch_size=BATCH_SIZE)
-
-    print("Generating last output...")
-    comp = Model(inputs=inputs, outputs=concat2)
-    comp.compile(optimizer='sgd',
-                  loss='mean_squared_error',
-                  metrics=['accuracy'])
-    concaten = comp.predict(x_in,
-            batch_size=BATCH_SIZE)
-
-    print("Counting results")
-    sol = y_in.flatten()
-    pred = model_pred.flatten()
-    tot = 0
-    for i, x in enumerate(pred):
-        if x > 0.5:
-            if sol[i] == 1.:
-                tot += 1
-        else:
-            if sol[i] == 0.:
-                tot += 1
-    theoretical = (VECTOR_SIZE/SEQ_LENGTH)*(1.- (1.-1./VECTOR_SIZE)**SEQ_LENGTH)
-    print("Score: ", tot, "/", len(sol), "(Pure random: ", theoretical*len(sol), ", ", theoretical," %)" )
+    print("Theoretical: ", 
+            VECTOR_SIZE*1./SEQ_LEN * (1.-(1.-1./VECTOR_SIZE)**SEQ_LEN) )
 
     #  import matplotlib.pyplot as plt
     #  plt.figure(1)
