@@ -1,4 +1,7 @@
 import numpy as np
+import random 
+import graphviz as gv
+
 from keras import *
 from keras.models import *
 from keras.models import model_from_json
@@ -79,5 +82,63 @@ def syracuse_batch(nb_tests, entry_size, scalar):
 
     return wait, l, x, r
 
-def count_batch(nb_tests, seq_len):
-    return None
+def generate_automaton(states, alphabet):
+    mat = [[[] for _ in range(states)] for _ in range(states)]
+    
+    for source in range(states):
+        for letter in range(alphabet):
+            dest = random.choice(range(states))
+            mat[source][dest] += [letter]
+
+    return mat
+
+
+def rand_walk(automaton, states, alphabet, length):
+    path = [0]
+    actual = 0
+    target = 0
+
+    for _ in range(length):
+        letter = random.choice(range(alphabet))
+        for dest in range(states):
+            if letter in automaton[actual][dest]:
+                target = dest
+
+        path += [letter]
+        actual = target
+
+    return (actual == states-1), path
+
+def automaton_batch(nb_tests, states, alphabet, length):
+    automaton = generate_automaton(states, alphabet)
+    
+    graph = gv.Digraph(format="svg")
+    for i in range(states):
+        graph.node(str(i))
+        for j in range(states):
+            for l in automaton[i][j]:
+                graph.edge(str(i), str(j), str(l))
+    graph.render("img/automaton")
+    
+    x = np.zeros((nb_tests, length, alphabet))
+    y = np.zeros((nb_tests, 1))
+
+    tot = 0
+
+    for i in range(nb_tests):
+        ok, path = rand_walk(automaton, states, alphabet, length)
+        for j in range(length):
+            x[i][j][path[j]] = 1.
+
+        if ok:
+            y[i] = 1.
+            tot +=1
+    
+    print("x: ", x[0])
+    print("y: ", y[0])
+    return x, y, tot
+
+    
+
+
+
