@@ -94,7 +94,8 @@ def generate_automaton(states, alphabet):
 
 
 def rand_walk(automaton, states, alphabet, length):
-    path = [0]
+    path = []
+    inter = [0]
     actual = 0
     target = 0
 
@@ -105,12 +106,41 @@ def rand_walk(automaton, states, alphabet, length):
                 target = dest
 
         path += [letter]
+        inter += [target]
         actual = target
 
     return (actual == states-1), path
+def mono_final_automaton_batch(nb_tests, states, alphabet, length, automaton=None):
+    if automaton is None:
+        automaton = generate_automaton(states, alphabet)
+ 
+    graph = gv.Digraph(format="svg")
+    for i in range(states):
+        graph.node(str(i))
+        for j in range(states):
+            for l in automaton[i][j]:
+                graph.edge(str(i), str(j), str(l))
+    graph.render("img/automaton")
+    
+    x = np.zeros((nb_tests, length, alphabet))
+    y = np.zeros((nb_tests, 1))
 
-def automaton_batch(nb_tests, states, alphabet, length):
-    automaton = generate_automaton(states, alphabet)
+    tot = 0
+
+    for i in range(nb_tests):
+        ok, path = rand_walk(automaton, states, alphabet, length)
+        for j in range(length):
+            x[i][j][path[j]] = 1.
+
+        if ok:
+            y[i] = 1.
+            tot +=1
+    
+    return x, y, tot
+
+def seq_final_automaton_batch(nb_tests, states, alphabet, length, automaton=None):
+    if automaton is None:
+        automaton = generate_automaton(states, alphabet)
     
     graph = gv.Digraph(format="svg")
     for i in range(states):
@@ -134,8 +164,6 @@ def automaton_batch(nb_tests, states, alphabet, length):
             y[i] = 1.
             tot +=1
     
-    print("x: ", x[0])
-    print("y: ", y[0])
     return x, y, tot
 
     
