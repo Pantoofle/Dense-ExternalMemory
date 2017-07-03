@@ -4,7 +4,7 @@
 Neural Network with RNN structure and external memory. Goal is to study the use of memory for NN facing complex tasks
 
 # Dependencies
-`python 3.6`, `numpy`, `tensorflow`, `keras`
+`python 3.6`, `numpy`, `tensorflow >= 1.2.1`, `keras >= 1.0.5`
 
 # Usage
 For a new Network
