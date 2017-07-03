@@ -1,3 +1,5 @@
+# Automaton inference problem
+
 # Dense-ExternalMemory - RNN Structure - Memory size extension
 Neural Network with RNN structure and external memory. Goal is to study the use of memory for NN facing complex tasks
 
