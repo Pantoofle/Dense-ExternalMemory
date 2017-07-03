@@ -1,3 +1,5 @@
+# Base problem, checking if an element has already been seen before
+
 # Dense-ExternalMemory - RNN Structure - Memory size extension
 Neural Network with RNN structure and external memory. Goal is to study the use of memory for NN facing complex tasks
 
