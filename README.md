@@ -20,7 +20,7 @@ Neural Network with RNN structure and external memory. Goal is to study the use 
 - Run the environnement: `source environnement/bin/activate`
 - Run the same things than for a classic local pip install
 
-To uninstall everything, it's more easy: 
+To uninstall everything, it's easy: 
 
 `make clean` and `rm -rf environnement`
 
