@@ -20,7 +20,6 @@ class IO_Heads(Recurrent):
             - read_heads  : number of read heads 
         """
         
-        print("Initialisating IO_Heads...")
         self.memory_size = memory_size
         self.vector_size = vector_size
         self.units = units
@@ -33,9 +32,6 @@ class IO_Heads(Recurrent):
         """
         Builds the network, sets the initial weights
         """
-        
-        
-        print("Building IO_Heads...")
 
         # Generates the memory access params 
         self.pre_treat = self.add_weight(
@@ -76,8 +72,7 @@ class IO_Heads(Recurrent):
 
         # Generates the output from the read vectors 
         self.post = self.add_weight(
-                shape=(self.vector_size + self.entry_size + self.read_heads*self.entry_size, 
-                    self.units),
+                shape=(self.vector_size + self.entry_size + self.read_heads*self.entry_size, 3),
                 initializer="uniform",
                 trainable=True,
                 name="POST")
@@ -92,7 +87,7 @@ class IO_Heads(Recurrent):
         """
         Initialisation of the states = initial memory content
         """
-        return [tf.constant(0., shape=(self.entry_size,)), self.memory]
+        return [tf.constant(0., shape=(self.entry_size,)), tf.constant(0.01, shape=(self.memory_size, self.entry_size))]
 
     def step(self, inputs, states):
         def dist(x, y):
@@ -131,12 +126,9 @@ class IO_Heads(Recurrent):
             self.memory = tf.subtract(self.memory, subb)
             self.memory = tf.add(self.memory, adder)
 
-        print("Getting previous memory state...")
         self.memory = states[1]
         
         inputs = K.concatenate([inputs[0], states[0]], axis=-1)
-
-        print("in: ", inputs)
 
         # Applies the first layers
         pre = K.dot(tf.reshape(inputs, (1, self.vector_size + self.entry_size)), self.pre_treat)
@@ -145,7 +137,6 @@ class IO_Heads(Recurrent):
         for i in range(self.depth):
             pre = K.dot(pre, self.deep_pre[i])
 
-        print("pre: ", pre)
         
         # Extracts data from the generated vector
         w_vect, w_weight, erase, r_vect = tf.split(pre, 
@@ -156,14 +147,10 @@ class IO_Heads(Recurrent):
             r, r_vect = tf.split(r_vect, [self.entry_size, self.entry_size*(self.read_heads-i-1)], axis=1)
             r_vectors.append(r)
 
-        print("Reading... ")
         reads = []
         for i in range(self.read_heads):
             r_weight = focus_by_content(r_vectors[i])
             reads.append(read_mem(r_weight))
-            print("Read: ", reads[-1])
-        
-        print("Writing...")
         write_mem(w_weight, w_vect, erase)   
         
         # The post operations
@@ -171,9 +158,9 @@ class IO_Heads(Recurrent):
 
         for i in range(self.depth):
             r = K.dot(r, self.deep_post[i])
-
-        res = tf.minimum( K.dot(r, self.post), tf.constant(1., shape=(1, 1)))
-        print("Ret: ", res)
+        
+        res = K.dot(r, self.post)
+        # We concatenate the memory to the output to print the memory state from outside the layer
         return res, [tf.reshape(reads[0], (self.entry_size, )), self.memory]
 
     def get_config(self):
