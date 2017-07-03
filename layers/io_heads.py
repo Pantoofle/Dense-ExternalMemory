@@ -127,10 +127,10 @@ class IO_Heads(Recurrent):
             self.memory = tf.add(self.memory, adder)
 
         self.memory = states[1]
-        
+        print("Inputs: ", inputs.shape)
         print("Before concat: ", inputs[0].shape, states[0].shape)
         inputs = K.concatenate([inputs[0], states[0]], axis=-1)
-        print("After concat: ", inputs)
+        print("After concat: ", inputs.shape)
         # Applies the first layers
         pre = K.dot(tf.reshape(inputs, (1, self.vector_size + self.entry_size)), self.pre_treat)
         
