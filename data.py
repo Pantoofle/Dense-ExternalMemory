@@ -90,6 +90,14 @@ def generate_automaton(states, alphabet):
             dest = random.choice(range(states))
             mat[source][dest] += [letter]
 
+    graph = gv.Digraph(format="svg")
+    for i in range(states):
+        graph.node(str(i))
+        for j in range(states):
+            for l in mat[i][j]:
+                graph.edge(str(i), str(j), str(l))
+    graph.render("img/automaton")
+    
     return mat
 
 
@@ -112,15 +120,7 @@ def rand_walk(automaton, states, alphabet, length):
 def automaton_batch(nb_tests, states, alphabet, length, automaton=None):
     if automaton is None:
         automaton = generate_automaton(states, alphabet)
-    
-    graph = gv.Digraph(format="svg")
-    for i in range(states):
-        graph.node(str(i))
-        for j in range(states):
-            for l in automaton[i][j]:
-                graph.edge(str(i), str(j), str(l))
-    graph.render("img/automaton")
-    
+   
     x = np.zeros((nb_tests, length, alphabet))
     y = np.zeros((nb_tests, 1))
 
@@ -135,8 +135,6 @@ def automaton_batch(nb_tests, states, alphabet, length, automaton=None):
             y[i] = 1.
             tot +=1
     
-    print("x: ", x[0])
-    print("y: ", y[0])
     return x, y, tot
 
     
