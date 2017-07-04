@@ -94,7 +94,7 @@ def generate_automaton(states, alphabet):
 
 
 def rand_walk(automaton, states, alphabet, length):
-    path = [0]
+    path = []
     actual = 0
     target = 0
 
@@ -109,8 +109,9 @@ def rand_walk(automaton, states, alphabet, length):
 
     return (actual == states-1), path
 
-def automaton_batch(nb_tests, states, alphabet, length):
-    automaton = generate_automaton(states, alphabet)
+def automaton_batch(nb_tests, states, alphabet, length, automaton=None):
+    if automaton is None:
+        automaton = generate_automaton(states, alphabet)
     
     graph = gv.Digraph(format="svg")
     for i in range(states):
