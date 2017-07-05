@@ -1,3 +1,5 @@
+import plotly as py
+import plotly.graph_objs as go
 import numpy as np
 
 from extractor import *
@@ -26,7 +28,7 @@ def rand_walk(t, stop_rate=0.1):
 
         state = t[state][c][0]
         
-        if stop_rate > np.random.random():
+        if stop_rate > np.random.random() or not (state in t):
             #  print("The random said... STOP")
             break
 
@@ -59,40 +61,40 @@ def convert_graph(mat):
 
 def test_inclusion(t1, t2, n, stop_rate=0.1):
     """
-    Generates n words over t1 and t2 and returns the porcentages of inclusion
-    of t1 into t2 and t2 into t1
+    Generates n words over t2 and returns the porcentages of false/true positive/negative
     """
     
-    w1 = [rand_walk(t1) for i in range(n)]
-    w2 = [rand_walk(t2) for i in range(n)]
+    walks = [rand_walk(t2) for i in range(n)]
+    words = [w[1] for w in walks]
+    prediction = [w[0] for w in walks]
+
+    solution = [test_word(t1, w) for w in words]
     
-    l1 = len([1 for w in w1 if w[0]])
-    l2 = len([1 for w in w2 if w[0]])
-    l3 = len([1 for w in w1 if not w[0]])
-    l4 = len([1 for w in w2 if not w[0]])
+    npos = len([1 for p in solution if p])
+    nneg = len([1 for p in solution if not p])
     
-    if l1 == 0:
-        nb_1_and_2 = 1.
+    if npos == 0:
+        tpr = 1.
+        fnr = 1.
     else:
-        nb_1_and_2 = sum([int(test_word(t2, w[1])) for w in w1 if w[0]])/l1
+        true_pos = len([1 for i in range(n) if solution[i] and prediction[i]])
+        tpr = true_pos*1./npos
 
-    if l2 == 0:
-        nb_2_and_1 = 1.
+        false_neg = len([1 for i in range(n) if solution[i] and (not prediction[i])])
+        fnr = false_neg*1./npos
+    if nneg == 0:
+        tnr = 1.
+        fpr = 1.
     else:
-        nb_2_and_1 = sum([int(test_word(t1, w[1])) for w in w2 if w[0]])/l2
+        true_neg = len([1 for i in range(n) if (not solution[i]) and (not prediction[i])])
+        tnr = true_neg*1./nneg
 
-    if l3 == 0:
-        nb_no1_and_no2 = 1.
-    else: 
-        nb_no1_and_no2 = sum([int(not test_word(t2, w[1])) for w in w1 if not w[0]])/l3
-
-    if l4 == 0:
-        nb_no2_and_no1 = 1.
-    else:
-        nb_no2_and_no1 = sum([int(not test_word(t1, w[1])) for w in w2 if not w[0]])/l4
+        false_pos = len([1 for i in range(n) if (not solution[i]) and prediction[i]])
+        fpr = false_pos*1./nneg
 
 
-    return nb_1_and_2, nb_2_and_1, nb_no1_and_no2, nb_no2_and_no1
+    return tpr, fpr, tnr, fnr
+
       
 def test_network(model, automaton, nb_tests, states, alphabet, batch_size, 
         nb_words, stop_rate, max_length):
@@ -104,26 +106,50 @@ def test_network(model, automaton, nb_tests, states, alphabet, batch_size,
         y_in = model.predict(x_in, batch_size = batch_size)
         x += [[str(a.tolist().index(1.)) for a in b] for b in x_in]
         y += y_in.tolist()
-        
-    x_in = ["".join(w) for w in x]
-    l_plus = [x for i, x in enumerate(x_in) if y[i][0] > 0.5]
-    l_minus = [x for i, x in enumerate(x_in) if y[i][0] <= 0.5]
+   
+    tpr = []
+    fpr = []
+
+    step = 0.1
+    for i in range(1, 10):
+        threshold = step*i
+        print("\nThreshold: ", threshold)
+        x_in = ["".join(w) for w in x]
+        l_plus = [x for i, x in enumerate(x_in) if y[i][0] > threshold]
+        l_minus = [x for i, x in enumerate(x_in) if y[i][0] <= threshold]
     
-    print("l_plus: ", len(l_plus))
-    print("l_minus: ", len(l_minus))
-    print("l_plus: ", l_plus[:10])
-    print("l_minus: ", l_minus[:10])
+        a2 = extract(l_plus, l_minus)    
+        a = convert_graph(automaton)
 
-    print("extracting the infered model from the predictions")
-    a2 = extract(l_plus, l_minus)    
-    a = convert_graph(automaton)
+        r = test_inclusion(a, a2, nb_words, stop_rate=stop_rate)
+        print("True positive rate:  ", r[0])
+        print("False positive rate: ", r[1])
+        print("True negative rate:  ", r[2])
+        print("False negative rate: ", r[3])
+        tpr += [r[0]]
+        fpr += [r[1]]
 
-    print("testing inclusion")
-    r = test_inclusion(a, a2, nb_words, stop_rate=stop_rate)
-    print("a = original automaton")
-    print("b = infered automaton")
-    print("prop of words valid in a that are valid in b:     ", r[0])
-    print("prop of words valid in b that are valid in a:     ", r[1])
-    print("prop of words invalid in a that are invalid in b: ", r[2])
-    print("prop of words invalid in b that are invalid in a: ", r[3])
+    return tpr, fpr
+
+def trace_ROC(tpr, fpr): 
+    trace = go.Scatter(
+            x = np.array(fpr),
+            y = np.array(tpr),
+            name = "Memory",
+            mode = 'markers',
+            marker = dict(
+                size = 10,
+                color = 'rgba(152, 0, 0, .8)'))
+
+    plots = [trace]
+
+    layout = dict(title = 'Styled Scatter',
+              yaxis = dict(zeroline = False, range=[0, 1]),
+              xaxis = dict(zeroline = False, range=[0, 1])
+             )
+
+    fig = dict(data=plots, layout=layout)    
+    py.offline.plot(fig, filename='roc.html')
+ 
+
 
