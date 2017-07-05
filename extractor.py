@@ -161,26 +161,20 @@ def generate_order(t):
     return sort_nodes(nodes)
 
 def trace_auto(t):
-    nb = {}
-    n = 0
-    for i in t:
-        nb[i] = str(n)
-        n += 1
-
     graph = gv.Digraph(format="svg")
     for i in t:
         if i == "entry":
             graph.node(i)
             graph.edge(i, t[i]["id"][0])
             continue
-        graph.node(nb[i])
+        graph.node(i)
         for c in t[i]:
             if c == "exit":
                 if t[i][c][0]:
-                    graph.edge(str(nb[i]), str(c))
+                    graph.edge(i, str(c))
                 continue
             for j in t[i][c]:
-                graph.edge(str(nb[i]), str(nb[j]), str(c))
+                graph.edge(i, j, str(c))
     graph.render("img/infered_automaton")
 
 def extract(L_p, L_m):
