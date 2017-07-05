@@ -64,10 +64,24 @@ def test_inclusion(t1, t2, n, stop_rate=0.1):
     
     w1 = [rand_walk(t1) for i in range(n)]
     w2 = [rand_walk(t2) for i in range(n)]
+    
+    l1 = len([1 for w in w1 if w[0]])
+    l2 = len([1 for w in w2 if w[0]])
+    l3 = len([1 for w in w1 if not w[0]])
+    l4 = len([1 for w in w2 if not w[0]])
+    
+    if l1 == 0:
+        l1 += 1
+    if l2 == 0:
+        l2 += 1
+    if l3 == 0:
+        l3 += 1
+    if l4 == 0:
+        l4 += 1
 
-    nb_1_and_2 = sum([int(test_word(t2, w[1])) for w in w1 if w[0]])/(len([1 for w in w1 if w[0]])+1)
-    nb_2_and_1 = sum([int(test_word(t1, w[1])) for w in w2 if w[0]])/(len([1 for w in w2 if w[0]])+1)
-    nb_no1_and_no2 = sum([int(not test_word(t2, w[1])) for w in w1 if not w[0]])/(len([1 for w in w1 if not w[0]])+1)
-    nb_no2_and_no1 = sum([int(not test_word(t1, w[1])) for w in w2 if not w[0]])/(len([1 for w in w2 if not w[0]])+1)
+    nb_1_and_2 = sum([int(test_word(t2, w[1])) for w in w1 if w[0]])/l1
+    nb_2_and_1 = sum([int(test_word(t1, w[1])) for w in w2 if w[0]])/l2
+    nb_no1_and_no2 = sum([int(not test_word(t2, w[1])) for w in w1 if not w[0]])/l3
+    nb_no2_and_no1 = sum([int(not test_word(t1, w[1])) for w in w2 if not w[0]])/l4
 
     return nb_1_and_2, nb_2_and_1, nb_no1_and_no2, nb_no2_and_no1
