@@ -39,7 +39,6 @@ def rename_depth(t):
             name[e] = d
             d += 1
             done += [e]
-   
     # Renaming
     m = {}
     for e in t:
@@ -55,8 +54,8 @@ def rename_depth(t):
         if e == "entry":
             m[e] = {"id": [str(name[t[e]["id"][0]])]}
         else :
-            m[str(name[e])] = m[e]
-            m.pop(e)
+            tmp = m.pop(e)
+            m[str(name[e])] = tmp
     return m
 
         
@@ -198,6 +197,7 @@ def extract(L_p, L_m):
                     break
             if cont:
                 break
+
     t = rename_depth(t)
     trace_auto(t)
     return t
