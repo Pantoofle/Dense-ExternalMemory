@@ -6,26 +6,32 @@ sys.path.append("layers/")
 import keras
 from keras.callbacks import *
 from keras.layers import * 
+
 from io_heads import *
 from data import *
 from extractor import *
-
+from graph_compare import *
 # Params used to generate data 
-STATES=3
+STATES=4
 ALPHABET=2
-LENGTH=5
+MIN_LENGTH=2
+MAX_LENGTH=7
 
 # Network params
-MEMORY_SIZE=10
-ENTRY_SIZE=5
+MEMORY_SIZE=30
+ENTRY_SIZE=10
 DEPTH=1
 READ_HEADS=2
 
 # Training params
-NB_TRAIN=500
-NB_TESTS=100
+TRAIN_PER_SIZE=300
+NB_TRAIN=10
+
+NB_TESTS=1000
 BATCH_SIZE=1
-NB_EPOCH=15
+NB_EPOCH=10
+NB_WORDS=1000
+STOP_RATE=0.1
 
 # Dir where models will be saved
 SAVE_DIR="models/"
@@ -67,21 +73,26 @@ if __name__ == "__main__":
     model.save_weights(SAVE_DIR+path+".h5")
 
     print("Compiling the model...")
-    model.compile(optimizer='rmsprop',
+    model.compile(optimizer='adadelta',
                   loss='mean_squared_error',
                   metrics=['accuracy'])
    
     if not(len(sys.argv) > 1 and sys.argv[1] == "notrain"):
-        x_in, y_in, tot = automaton_batch(NB_TRAIN, STATES, ALPHABET, LENGTH, automaton=automaton)
-        print("Rate: ", tot*1./NB_TRAIN)
-        print("Training ...")
-        model.fit(x_in, y_in,
-            batch_size=BATCH_SIZE,
-            epochs=NB_EPOCH)
+        for i in range(NB_TRAIN):        
+            length=np.random.randint(MIN_LENGTH, MAX_LENGTH+1)
+            print("Train ", i+1, " of ", NB_TRAIN, ": word length: ", length)
+            x_in, y_in, tot = automaton_batch(TRAIN_PER_SIZE, 
+                    STATES, ALPHABET, length, automaton=automaton)
+            print("Rate: ", tot*1./TRAIN_PER_SIZE, " - ", 1-tot*1./TRAIN_PER_SIZE)
+            print("Training ...")
+            model.fit(x_in, y_in,
+                batch_size=BATCH_SIZE,
+                epochs=NB_EPOCH)
 
     x = []
-    y = []    
-    for i in range(3, LENGTH+1):
+    y = []   
+    print("Generating the predictions")
+    for i in range(3, MAX_LENGTH+1):
         x_in, _, _ = automaton_batch(NB_TESTS, STATES, ALPHABET, i, automaton=automaton)
         y_in = model.predict(x_in, batch_size = BATCH_SIZE)
         x += [[str(a.tolist().index(1.)) for a in b] for b in x_in]
@@ -95,6 +106,18 @@ if __name__ == "__main__":
     print("L_minus: ", len(L_minus))
     print("L_plus: ", L_plus[:10])
     print("L_minus: ", L_minus[:10])
-    extract(L_plus, L_minus)    
 
+    print("Extracting the infered model from the predictions")
+    a2 = extract(L_plus, L_minus)    
+    
+    a = convert_graph(automaton)
+
+    print("Testing inclusion")
+    r = test_inclusion(a, a2, NB_WORDS, stop_rate=STOP_RATE)
+    print("A = Original automaton")
+    print("B = Infered automaton")
+    print("Prop of words valid in A valid in B:     ", r[0])
+    print("Prop of words valid in B valid in A:     ", r[1])
+    print("Prop of words invalid in A invalid in B: ", r[2])
+    print("Prop of words invalid in B invalid in A: ", r[3])
 
