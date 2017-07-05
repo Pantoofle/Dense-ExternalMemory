@@ -12,26 +12,26 @@ from data import *
 from extractor import *
 from graph_compare import *
 # Params used to generate data 
-STATES=4
+STATES=3
 ALPHABET=2
-MIN_LENGTH=2
-MAX_LENGTH=7
+MIN_LENGTH=3
+MAX_LENGTH=6
 
 # Network params
-MEMORY_SIZE=30
-ENTRY_SIZE=10
+MEMORY_SIZE=10
+ENTRY_SIZE=5
 DEPTH=1
 READ_HEADS=2
 
 # Training params
 TRAIN_PER_SIZE=300
-NB_TRAIN=10
+NB_TRAIN=3
 
-NB_TESTS=1000
+NB_TESTS=100
 BATCH_SIZE=1
-NB_EPOCH=10
-NB_WORDS=1000
-STOP_RATE=0.1
+NB_EPOCH=20
+NB_WORDS=800
+STOP_RATE=0.2
 
 # Dir where models will be saved
 SAVE_DIR="models/"
@@ -62,18 +62,18 @@ if __name__ == "__main__":
             read_heads=READ_HEADS,
             depth=DEPTH)(inputs)
     
+    lstm = LSTM(32)(inputs)
+    aux = Dense(1)(lstm)
+    
     model = Model(inputs=inputs, outputs=memory)
-
-    # Load if asked
-    if len(sys.argv) > 1 and sys.argv[1]=="load":
-        print("Loading the full layer...")
-        model = load_model(SAVE_DIR+path+".h5",
-                {'IO_Heads': IO_Heads})
-
-    model.save_weights(SAVE_DIR+path+".h5")
+    model2 = Model(inputs=inputs, outputs=aux)
 
     print("Compiling the model...")
     model.compile(optimizer='adadelta',
+                  loss='mean_squared_error',
+                  metrics=['accuracy'])
+    
+    model2.compile(optimizer='adadelta',
                   loss='mean_squared_error',
                   metrics=['accuracy'])
    
@@ -88,36 +88,12 @@ if __name__ == "__main__":
             model.fit(x_in, y_in,
                 batch_size=BATCH_SIZE,
                 epochs=NB_EPOCH)
-
-    x = []
-    y = []   
-    print("Generating the predictions")
-    for i in range(3, MAX_LENGTH+1):
-        x_in, _, _ = automaton_batch(NB_TESTS, STATES, ALPHABET, i, automaton=automaton)
-        y_in = model.predict(x_in, batch_size = BATCH_SIZE)
-        x += [[str(a.tolist().index(1.)) for a in b] for b in x_in]
-        y += y_in.tolist()
-        
-    x_in = ["".join(w) for w in x]
-    L_plus = [x for i, x in enumerate(x_in) if y[i][0] > 0.5]
-    L_minus = [x for i, x in enumerate(x_in) if y[i][0] <= 0.5]
+            model2.fit(x_in, y_in,
+                batch_size=BATCH_SIZE,
+                epochs=NB_EPOCH)
     
-    print("L_plus: ", len(L_plus))
-    print("L_minus: ", len(L_minus))
-    print("L_plus: ", L_plus[:10])
-    print("L_minus: ", L_minus[:10])
-
-    print("Extracting the infered model from the predictions")
-    a2 = extract(L_plus, L_minus)    
-    
-    a = convert_graph(automaton)
-
-    print("Testing inclusion")
-    r = test_inclusion(a, a2, NB_WORDS, stop_rate=STOP_RATE)
-    print("A = Original automaton")
-    print("B = Infered automaton")
-    print("Prop of words valid in A valid in B:     ", r[0])
-    print("Prop of words valid in B valid in A:     ", r[1])
-    print("Prop of words invalid in A invalid in B: ", r[2])
-    print("Prop of words invalid in B invalid in A: ", r[3])
+    print("Testing Mem...")
+    test_network(model, automaton, NB_TESTS, STATES, ALPHABET, BATCH_SIZE, NB_WORDS, STOP_RATE, MAX_LENGTH)
+    print("Testing LSTM...")
+    test_network(model2, automaton, NB_TESTS, STATES, ALPHABET, BATCH_SIZE, NB_WORDS, STOP_RATE, MAX_LENGTH)
 
