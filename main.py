@@ -12,25 +12,25 @@ from data import *
 from extractor import *
 from graph_compare import *
 # Params used to generate data 
-STATES=3
-ALPHABET=2
-MIN_LENGTH=3
-MAX_LENGTH=6
+STATES=10
+ALPHABET=5
+MIN_LENGTH=4
+MAX_LENGTH=15
 
 # Network params
-MEMORY_SIZE=10
-ENTRY_SIZE=5
+MEMORY_SIZE=20
+ENTRY_SIZE=10
 DEPTH=1
 READ_HEADS=2
 
 # Training params
-TRAIN_PER_SIZE=300
-NB_TRAIN=3
+TRAIN_PER_SIZE=500
+NB_TRAIN=4
 
-NB_TESTS=100
+NB_TESTS=200
 BATCH_SIZE=1
-NB_EPOCH=20
-NB_WORDS=800
+NB_EPOCH=16
+NB_WORDS=1000
 STOP_RATE=0.2
 
 # Dir where models will be saved
@@ -88,12 +88,16 @@ if __name__ == "__main__":
             model.fit(x_in, y_in,
                 batch_size=BATCH_SIZE,
                 epochs=NB_EPOCH)
-            model2.fit(x_in, y_in,
-                batch_size=BATCH_SIZE,
-                epochs=NB_EPOCH)
+            #  model2.fit(x_in, y_in,
+            #      batch_size=BATCH_SIZE,
+            #      epochs=NB_EPOCH)
     
     print("Testing Mem...")
-    test_network(model, automaton, NB_TESTS, STATES, ALPHABET, BATCH_SIZE, NB_WORDS, STOP_RATE, MAX_LENGTH)
-    print("Testing LSTM...")
-    test_network(model2, automaton, NB_TESTS, STATES, ALPHABET, BATCH_SIZE, NB_WORDS, STOP_RATE, MAX_LENGTH)
+    tpr, fpr = test_network(model, automaton, NB_TESTS, 
+            STATES, ALPHABET, BATCH_SIZE, NB_WORDS, STOP_RATE, MAX_LENGTH)
+    trace_ROC(tpr, fpr)
 
+    print("Testing LSTM...")
+    #  tpr, fpr = test_network(model2, automaton, NB_TESTS,
+    #          STATES, ALPHABET, BATCH_SIZE, NB_WORDS, STOP_RATE, MAX_LENGTH)
+    #
