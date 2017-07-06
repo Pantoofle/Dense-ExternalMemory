@@ -12,10 +12,10 @@ from data import *
 from extractor import *
 from graph_compare import *
 # Params used to generate data 
-STATES=10
-ALPHABET=5
+STATES=4
+ALPHABET=4
 MIN_LENGTH=4
-MAX_LENGTH=15
+MAX_LENGTH=8
 
 # Network params
 MEMORY_SIZE=20
@@ -24,13 +24,13 @@ DEPTH=1
 READ_HEADS=2
 
 # Training params
-TRAIN_PER_SIZE=500
+TRAIN_PER_SIZE=400
 NB_TRAIN=4
 
 NB_TESTS=200
 BATCH_SIZE=1
-NB_EPOCH=16
-NB_WORDS=1000
+NB_EPOCH=8
+NB_WORDS=200
 STOP_RATE=0.2
 
 # Dir where models will be saved
