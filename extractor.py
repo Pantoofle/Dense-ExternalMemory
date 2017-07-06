@@ -146,14 +146,18 @@ def sort_nodes(l):
         a = sort_nodes(l[::2])
         b = sort_nodes(l[1::2])
         c = []
-        while len(a) != 0 and len(b) != 0:
-            if cmp(a[0], b[0]):
-                c +=[a[0]]
-                a = a[1:]
+        i, j = 0, 0
+        while i != len(a) and j != len(b):
+            if cmp(a[i], b[j]):
+                c +=[a[i]]
+                i += 1
             else:
-                c +=[b[0]]
-                b = b[1:]
-        return c+a+b
+                c +=[b[j]]
+                j += 1
+        if i == len(a):
+            return c+b[j:]
+        else:
+            return c+a[i:]
 
 def generate_order(t):
     nodes = [i for i in t if i != "entry"]
@@ -177,6 +181,7 @@ def trace_auto(t):
     graph.render("img/infered_automaton")
 
 def extract(L_p, L_m):
+    print("Extracting...")
     t = build_tree(L_p)
     t = rename_depth(t)
     nodes = generate_order(t)
@@ -185,15 +190,19 @@ def extract(L_p, L_m):
         cont = False
         for i in range(len(nodes)):
             for j in range(i+1, len(nodes)):
+                print("Merging ", nodes[i]," - ", nodes[j])
                 t2 = merge(t, nodes[i], nodes[j])
                 if len(t2) < len(t):
+                    print("Reducing...")
                     t2 = reduce(t2)
                 if not test_Lminus(t2, L_m):
                     t2 = t
+                    print("A bad one")
                 else:
                     t = t2
                     nodes = generate_order(t)
                     cont = True
+                    print("A good one")
                     break
             if cont:
                 break
