@@ -1,0 +1,13 @@
+digraph {
+	entry
+		entry -> 0
+	0
+		0 -> 0 [label=1]
+		0 -> 1 [label=2]
+	1
+		1 -> 2 [label=1]
+		1 -> 2 [label=2]
+	2
+		2 -> exit
+		2 -> 2 [label=1]
+}

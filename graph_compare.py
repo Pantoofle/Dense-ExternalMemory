@@ -3,36 +3,6 @@ import plotly.graph_objs as go
 import numpy as np
 
 from extractor import *
-from data import *
-
-def rand_walk(t, stop_rate=0.1):
-    """
-    Generate a word over t
-    It may or may not end in a final state
-    After each step, the walk has probability stop_rate to just end there
-    """
-    
-    word = []
-    state = t["entry"]["id"][0]
-
-    while True:
-        possib = [c for c in t[state] if c != "exit"]
-        if len(possib) == 0:
-            #  print("No place to go...")
-            break
-        i = np.random.randint(len(possib))
-        c = possib[i]
-        #  print("Next move: ", c)
-
-        word += [c]
-
-        state = t[state][c][0]
-        
-        if stop_rate > np.random.random() or not (state in t):
-            #  print("The random said... STOP")
-            break
-
-    return t[state]["exit"][0], word
 
 def convert_graph(mat):
     """
@@ -96,13 +66,13 @@ def test_inclusion(t1, t2, n, stop_rate=0.1):
     return tpr, fpr, tnr, fnr
 
       
-def test_network(model, automaton, nb_tests, states, alphabet, batch_size, 
+def test_network(model, automaton, nb_tests,alphabet, batch_size, 
         nb_words, stop_rate, max_length):
     x = []
     y = []   
     print("generating the predictions")
     for i in range(3, max_length+1):
-        x_in, _, _ = automaton_batch(nb_tests, states, alphabet, i, automaton=automaton)
+        x_in, _, _ = automaton_batch(nb_tests,alphabet, i, automaton=automaton)
         y_in = model.predict(x_in, batch_size = batch_size)
         x += [[str(a.tolist().index(1.)) for a in b] for b in x_in]
         y += y_in.tolist()

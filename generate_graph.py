@@ -5,9 +5,9 @@ def automaton1():
             0: {"0": [1],
                 "1": [0],
                 "exit": [True]},
-            1: {"0": [1],
-                "1": [0],
-                "exit": [True]}
+            1: {"0": [0],
+                "1": [1],
+                "exit": [False]}
             }
 
 def automaton2():

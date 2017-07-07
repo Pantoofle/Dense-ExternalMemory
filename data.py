@@ -6,6 +6,8 @@ from keras import *
 from keras.models import *
 from keras.models import model_from_json
 
+from graph_compare import *
+
 def parity_batch(nb_tests, upper_bound):
     nbs = np.random.random_integers(upper_bound, size=(nb_tests,))-1
     x = np.zeros((nb_tests, upper_bound), dtype="float32")
@@ -98,26 +100,10 @@ def generate_automaton(states, alphabet):
                 graph.edge(str(i), str(j), str(l))
     graph.render("img/automaton")
     
-    return mat
+    return convert_graph(mat)
 
 
-def rand_walk(automaton, states, alphabet, length):
-    path = []
-    actual = 0
-    target = 0
-
-    for _ in range(length):
-        letter = random.choice(range(alphabet))
-        for dest in range(states):
-            if letter in automaton[actual][dest]:
-                target = dest
-
-        path += [letter]
-        actual = target
-
-    return (actual == states-1), path
-
-def automaton_batch(nb_tests, states, alphabet, length, automaton=None):
+def automaton_batch(nb_tests, alphabet, length, automaton=None, states=0):
     if automaton is None:
         automaton = generate_automaton(states, alphabet)
    
@@ -127,14 +113,17 @@ def automaton_batch(nb_tests, states, alphabet, length, automaton=None):
     tot = 0
 
     for i in range(nb_tests):
-        ok, path = rand_walk(automaton, states, alphabet, length)
+        ok, path = rand_walk(automaton, length=length )
         for j in range(length):
-            x[i][j][path[j]] = 1.
+            x[i][j][int(path[j])] = 1.
 
         if ok:
             y[i] = 1.
             tot +=1
-    
+
+    #  print("Automaton: ", automaton)
+    #  print("Generated: ", x[-10:])
+    #  print("Solution: ", y[-10:])
     return x, y, tot
 
     

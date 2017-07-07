@@ -57,7 +57,7 @@ class IO_Heads(Recurrent):
         # The memory, note the 'trainable=False'
         self.memory = self.add_weight(
                 shape=(self.memory_size, self.entry_size),
-                initializer=RandomUniform(minval=0., maxval=0.25),
+                initializer=Constant(0.),
                 trainable=False,
                 name="MEMORY")
        
@@ -109,7 +109,7 @@ class IO_Heads(Recurrent):
             dists = tf.map_fn(
                     lambda y: dist(x, tf.reshape(y, (self.entry_size, 1))),
                     self.memory)
-            return dists
+            return tf.nn.softmax(dists)
 
         def read_mem(weight):
             """
@@ -124,8 +124,8 @@ class IO_Heads(Recurrent):
             Writes vector to memory with weight
             """
             weight = tf.reshape(weight, (self.memory_size, 1))
-            vector = tf.reshape(vector, (1, self.entry_size))
-            eraser = tf.reshape(eraser, (1, self.entry_size))
+            vector = tf.nn.softmax(tf.reshape(vector, (1, self.entry_size)))
+            eraser = tf.nn.softmax(tf.reshape(eraser, (1, self.entry_size)))
             subb = K.dot(weight, eraser)
             adder = K.dot(weight, vector)
             self.memory = tf.subtract(self.memory, subb)

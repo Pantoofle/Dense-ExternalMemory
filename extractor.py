@@ -1,6 +1,43 @@
 import numpy as np
 import graphviz as gv
 
+ALF_PATH="/home/gyldhas/stage/libalf/online"
+ALF_ENV ={"LD_LIBRARY_PATH":"/usr/local/lib"}
+
+def rand_walk(t, stop_rate=0.25, length=0):
+    """
+    Generate a word over t
+    It may or may not end in a final state
+    After each step, the walk has probability stop_rate to just end there
+    If length is specified, then the length is respected
+    """
+    
+    word = []
+    state = t["entry"]["id"][0]
+    l = 0
+
+    while True:
+        possib = [c for c in t[state] if c != "exit"]
+        if len(possib) == 0:
+            #  print("No place to go...")
+            break
+        i = np.random.randint(len(possib))
+        c = possib[i]
+        #  print("Next move: ", c)
+
+        word += [c]
+        l += 1
+
+        state = t[state][c][0]
+        
+        if (stop_rate > np.random.random() and length == 0) or l == length:
+            #  print("The random said... STOP")
+            break
+
+    return t[state]["exit"][0], word
+
+
+
 def build_tree(L_plus):
     n = 1
     tree = {0: {"exit": [False]}, 
@@ -210,4 +247,95 @@ def extract(L_p, L_m):
     t = rename_depth(t)
     trace_auto(t)
     return t
+
+
+def word2vect(w, alphabet):
+    x = np.zeros((1, len(w), alphabet))
+    for j in range(len(w)):
+        x[0][j][int(w[j])] = 1.
+    return x
+
+
+
+def alf_infere(model, automaton, threshold, alphabet):
+    import subprocess as sp
+    s = sp.Popen([ALF_PATH], 
+            stdout=sp.PIPE, 
+            stdin=sp.PIPE, 
+            universal_newlines=True,
+            env=ALF_ENV)
+    i = s.stdin
+    o = s.stdout
+
+    conj = ""
+
+    o.readline()
+    i.write(str(alphabet) + "\n")
+    i.flush()
+    o.readline()
+    i.write(str(1) + "\n")
+    i.flush()
+    read = True
+
+    while True:
+        if read:
+            w = o.readline()[:-1]
+        else:
+            read = True
+        print("He said: ",w) 
+        if w == "Conjecture:":
+            print("Oh, a try! Bring it on!")
+            c = ""
+            while w != "End of auto":
+                w = o.readline()[:-1]
+                c += w
+
+            if c == conj:
+                print("Okay!")
+                i.write("y\n")
+                i.flush()
+                continue
+            else:
+                print("Nope!")
+                conj = c
+                i.write("n\n")
+                i.flush()
+                
+                w = o.readline()[:-1]
+                _, word = rand_walk(automaton)
+                word = "".join(word)
+                i.write(word + "\n")
+                i.flush()
+                
+                w = o.readline()[:-1]
+                if w == "Conjecture:":
+                    i.write("y\n")
+                    i.flush()
+                    read = False
+                    continue
+
+                y = model.predict(word2vect(word, alphabet), batch_size=1)
+                r = str(int(y[0][0] > threshold)) + "\n"
+                i.write(r)
+                i.flush()
+                continue  
+        
+        if w == "Result:":
+            res = o.read()
+            print("Result:\n", res)
+            break
+        
+        print("He asked for ", w)
+        x= word2vect(w, alphabet)
+
+        y = model.predict(x, batch_size=1)
+        r = str(int(y[0][0] > threshold)) + "\n"
+        i.write(r)
+        i.flush()
+        print("I answered ",r)
+
+
+
+
+
 
