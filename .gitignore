@@ -1,3 +1,7 @@
+# The executables
+online
+a.out
+
 # The models
 *.h5
 
@@ -5,6 +9,7 @@
 *.jpg
 *.bmp
 *.png
+*.dot
 
 # The logs
 logs/
