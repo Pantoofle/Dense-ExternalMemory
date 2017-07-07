@@ -90,12 +90,14 @@ if __name__ == "__main__":
             #      epochs=NB_EPOCH)
     
     print("Generating infered automaton")
-    alf_infere(model, automaton, THRESHOLD, ALPHABET)
+    res = alf_infere(model, automaton, THRESHOLD, ALPHABET)
+    with open("graph.dot", "w+") as file:
+        file.write(res[:-3])
+
 
     #  tpr, fpr = test_network(model, automaton, NB_TESTS, ALPHABET, BATCH_SIZE, NB_WORDS, STOP_RATE, MAX_LENGTH)
     #  trace_ROC(tpr, fpr)
 
-    print("Testing LSTM...")
     #  tpr, fpr = test_network(model2, automaton, NB_TESTS,
     #          STATES, ALPHABET, BATCH_SIZE, NB_WORDS, STOP_RATE, MAX_LENGTH)
     #

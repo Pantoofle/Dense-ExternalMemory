@@ -323,7 +323,7 @@ def alf_infere(model, automaton, threshold, alphabet):
         if w == "Result:":
             res = o.read()
             print("Result:\n", res)
-            break
+            return res
         
         print("He asked for ", w)
         x= word2vect(w, alphabet)
