@@ -34,14 +34,8 @@ class IO_Heads(Recurrent):
                     trainable = True,
                     name = "DEEP_PRE_"+str(i)))
 
-        self.memory = self.add_weight(
-                shape=(self.memory_size, self.entry_size),
-                initializer=RandomUniform(minval=0., maxval=0.25),
-                trainable=False,
-                name="MEMORY")
+        self.memory = tf.constant(0., shape=(self.memory_size, self.entry_size))
        
-        self.memory.eval(K.get_session())
-
         self.deep_post = []
         for i in range(self.depth):
             self.deep_post.append( self.add_weight(
@@ -63,7 +57,7 @@ class IO_Heads(Recurrent):
 
     def get_initial_state(self, inputs):
         print("inputs, ", inputs)
-        return [tf.random_uniform(shape=self.mem_shape, minval=0., maxval=0.25, dtype="float32")]
+        return [tf.constant(0., shape=self.mem_shape)]
 
     def step(self, inputs, states):
         def dist(x, y):
@@ -74,17 +68,24 @@ class IO_Heads(Recurrent):
             dists = tf.map_fn(
                     lambda y: dist(x, tf.reshape(y, (self.entry_size, 1))),
                     self.memory)
+            dists = tf.nn.softmax(dists)
             return dists
 
         def read_mem(weight):
             weight = tf.reshape(weight, (1, self.memory_size))
             r = tf.matmul(weight, self.memory)
+            r = tf.nn.softmax(r)
             return r
 
         def write_mem(weight, vector, eraser):
             weight = tf.reshape(weight, (self.memory_size, 1))
+            
             vector = tf.reshape(vector, (1, self.entry_size))
+            vector = tf.nn.softmax(vector)
+            
             eraser = tf.reshape(eraser, (1, self.entry_size))
+            eraser = tf.nn.softmax(eraser)
+
             subb = K.dot(weight, eraser)
             adder = K.dot(weight, vector)
             self.memory = tf.subtract(self.memory, subb)
@@ -111,7 +112,7 @@ class IO_Heads(Recurrent):
         r_vectors = []
         for i in range(self.read_heads):
             r, r_vect = tf.split(r_vect, [self.entry_size, self.entry_size*(self.read_heads-i-1)], axis=1)
-            r_vectors.append(r)
+            r_vectors.append(tf.nn.softmax(r))
 
         print("Reading... ")
 
