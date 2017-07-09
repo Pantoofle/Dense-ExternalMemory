@@ -61,7 +61,7 @@ if __name__ == "__main__":
     lstm = LSTM(32)(inputs)
     aux = Dense(1)(lstm)
     
-    model = Model(inputs=inputs, outputs=aux)
+    model = Model(inputs=inputs, outputs=memory)
     model2 = Model(inputs=inputs, outputs=aux)
 
     print("Compiling the model...")

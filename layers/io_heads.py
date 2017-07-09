@@ -54,16 +54,8 @@ class IO_Heads(Recurrent):
                     trainable = True,
                     name = "DEEP_PRE_"+str(i)))
 
-        # The memory, note the 'trainable=False'
-        self.memory = self.add_weight(
-                shape=(self.memory_size, self.entry_size),
-                initializer=Constant(0.),
-                trainable=False,
-                name="MEMORY")
+        self.memory = tf.constant(0., shape=(self.memory_size, self.entry_size))
        
-        # Because it is not trainable we need to evaluate it before 
-        self.memory.eval(K.get_session())
-
         # Deep 
         self.deep_post = []
         for i in range(self.depth):
@@ -117,7 +109,7 @@ class IO_Heads(Recurrent):
             """
             weight = tf.reshape(weight, (1, self.memory_size))
             r = tf.matmul(weight, self.memory)
-            return r
+            return tf.nn.softmax(r)
 
         def write_mem(weight, vector, eraser):
             """
@@ -125,7 +117,9 @@ class IO_Heads(Recurrent):
             """
             weight = tf.reshape(weight, (self.memory_size, 1))
             vector = tf.nn.softmax(tf.reshape(vector, (1, self.entry_size)))
+            
             eraser = tf.nn.softmax(tf.reshape(eraser, (1, self.entry_size)))
+            
             subb = K.dot(weight, eraser)
             adder = K.dot(weight, vector)
             self.memory = tf.subtract(self.memory, subb)
@@ -160,7 +154,7 @@ class IO_Heads(Recurrent):
         reads = []
         for i in range(self.read_heads):
             r_weight = focus_by_content(r_vectors[i])
-            reads.append(read_mem(r_weight))
+            reads.append(tf.nn.softmax(read_mem(r_weight)))
             print("Read: ", reads[-1])
         
         print("Writing...")
