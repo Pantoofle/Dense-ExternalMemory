@@ -11,17 +11,17 @@ from data import *
 
 VECTOR_SIZE=8
 SEQ_LEN=7
-MEMORY_SIZE=2
-ENTRY_SIZE=3
+MEMORY_SIZE=10
+ENTRY_SIZE=10
 
-DEPTH=0
+DEPTH=1
 READ_HEADS=1
 
-NB_TRAIN=200
+NB_TRAIN=4000
 NB_TESTS=100
 
 BATCH_SIZE=1
-NB_EPOCH=10
+NB_EPOCH=50
 
 SAVE_DIR="models/"
 
@@ -50,7 +50,6 @@ if __name__ == "__main__":
     
     model = Model(inputs=inputs, outputs=memory)
     mem = model.get_layer("MAIN").memory
-    model_mem = Model(inputs=inputs, outputs=mem)
     
     if len(sys.argv) > 1 and sys.argv[1]=="load":
         print("Loading the full layer...")
@@ -60,19 +59,16 @@ if __name__ == "__main__":
     model.save_weights(SAVE_DIR+path+".h5")
 
     print("Compiling the model...")
-    model.compile(optimizer='adam',
-                  loss='mean_squared_error',
-                  metrics=['accuracy'])
-    model_mem.compile(optimizer='adam',
+    model.compile(optimizer='rmsprop',
                   loss='mean_squared_error',
                   metrics=['accuracy'])
    
-    model_mem.summary()
+    model.summary()
     print("IN: ", x_in.shape)
     print("OUT: ", y_in.shape)
     if not(len(sys.argv) > 1 and sys.argv[1] == "notrain"):
         print("Training second layer...")
-        model_mem.fit(x_in, y_in,
+        model.fit(x_in, y_in,
                 batch_size=BATCH_SIZE,
                 epochs=NB_EPOCH,
                 validation_split=0.2,
