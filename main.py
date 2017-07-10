@@ -49,7 +49,9 @@ if __name__ == "__main__":
             return_sequences=True)(inputs)
     
     model = Model(inputs=inputs, outputs=memory)
-
+    mem = model.get_layer("MAIN").memory
+    model_mem = Model(inputs=inputs, outputs=mem)
+    
     if len(sys.argv) > 1 and sys.argv[1]=="load":
         print("Loading the full layer...")
         model = load_model(SAVE_DIR+path+".h5",
@@ -61,13 +63,16 @@ if __name__ == "__main__":
     model.compile(optimizer='adam',
                   loss='mean_squared_error',
                   metrics=['accuracy'])
+    model_mem.compile(optimizer='adam',
+                  loss='mean_squared_error',
+                  metrics=['accuracy'])
    
-    model.summary()
+    model_mem.summary()
     print("IN: ", x_in.shape)
     print("OUT: ", y_in.shape)
     if not(len(sys.argv) > 1 and sys.argv[1] == "notrain"):
         print("Training second layer...")
-        model.fit(x_in, y_in,
+        model_mem.fit(x_in, y_in,
                 batch_size=BATCH_SIZE,
                 epochs=NB_EPOCH,
                 validation_split=0.2,
@@ -77,8 +82,6 @@ if __name__ == "__main__":
                         write_graph=True, 
                         write_images=True)])
 
-        print("Saving the full model...")
-        save_model(model, SAVE_DIR+path+".h5")
     
     print("Theoretical: ", 
             VECTOR_SIZE*1./SEQ_LEN * (1.-(1.-1./VECTOR_SIZE)**SEQ_LEN) )

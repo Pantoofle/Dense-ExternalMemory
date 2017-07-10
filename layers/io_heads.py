@@ -62,7 +62,10 @@ class IO_Heads(Recurrent):
     def step(self, inputs, states):
         def dist(x, y):
             m = tf.matmul(tf.reshape(x, (1, self.entry_size)) , y)
-            return m
+            if tf.norm(x) == 0 or tf.norm(y) == 0:
+                return tf.constant(1., shape=(1, 1))
+            else:
+                return m/(tf.norm(y) * tf.norm(x))
 
         def focus_by_content(x):
             dists = tf.map_fn(
@@ -70,6 +73,12 @@ class IO_Heads(Recurrent):
                     self.memory)
             dists = tf.nn.softmax(dists)
             return dists
+
+        def interpolation(w_t, w_t2, g):
+            return w_t*g + w_t2*(1-g)
+
+        def convolution(w, s):
+
 
         def read_mem(weight):
             weight = tf.reshape(weight, (1, self.memory_size))
@@ -86,9 +95,10 @@ class IO_Heads(Recurrent):
             eraser = tf.reshape(eraser, (1, self.entry_size))
             eraser = tf.nn.softmax(eraser)
 
-            subb = K.dot(weight, eraser)
+            dell = K.dot(weight, eraser)
             adder = K.dot(weight, vector)
-            self.memory = tf.subtract(self.memory, subb)
+            
+            self.memory = tf.multiply(self.memory, dell)
             self.memory = tf.add(self.memory, adder)
 
         # _, m = tf.split(states[0], [self.vector_size, self.memory_size*(self.vector_size+2)], axis=1)
