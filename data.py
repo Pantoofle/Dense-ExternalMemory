@@ -6,7 +6,7 @@ from keras import *
 from keras.models import *
 from keras.models import model_from_json
 
-from graph_compare import *
+from extractor import *
 
 def parity_batch(nb_tests, upper_bound):
     nbs = np.random.random_integers(upper_bound, size=(nb_tests,))-1
