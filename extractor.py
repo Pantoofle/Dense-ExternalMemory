@@ -266,7 +266,7 @@ def alf_infere(model, automaton, threshold, alphabet):
             env=ALF_ENV)
     i = s.stdin
     o = s.stdout
-
+    
     conj = ""
 
     o.readline()
@@ -282,21 +282,21 @@ def alf_infere(model, automaton, threshold, alphabet):
             w = o.readline()[:-1]
         else:
             read = True
-        print("He said: ",w) 
+        #  print("He said: ",w)
         if w == "Conjecture:":
-            print("Oh, a try! Bring it on!")
+            #  print("Oh, a try! Bring it on!")
             c = ""
             while w != "End of auto":
                 w = o.readline()[:-1]
                 c += w
 
             if c == conj:
-                print("Okay!")
+                #  print("Okay!")
                 i.write("y\n")
                 i.flush()
                 continue
             else:
-                print("Nope!")
+                #  print("Nope!")
                 conj = c
                 i.write("n\n")
                 i.flush()
@@ -322,17 +322,16 @@ def alf_infere(model, automaton, threshold, alphabet):
         
         if w == "Result:":
             res = o.read()
-            print("Result:\n", res)
+            #  print("Result:\n", res)
             return res
         
-        print("He asked for ", w)
         x= word2vect(w, alphabet)
 
         y = model.predict(x, batch_size=1)
         r = str(int(y[0][0] > threshold)) + "\n"
         i.write(r)
         i.flush()
-        print("I answered ",r)
+        #  print("I answered ",r)
 
 
 
