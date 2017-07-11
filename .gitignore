@@ -1,3 +1,7 @@
+# The temp results
+*.txt
+*.html
+
 # The executables
 online
 a.out
