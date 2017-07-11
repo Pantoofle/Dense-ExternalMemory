@@ -19,8 +19,8 @@ build: online
 run: build
 	rm -rf logs/
 	TF_CPP_MIN_LOG_LEVEL=1 python main.py
-	dot -Tsvg graph.dot > graph.svg
-	firefox graph.svg
+	# dot -Tsvg graph.dot > graph.svg
+	# firefox graph.svg
 clean:
 	@echo Cleaning...
 	rm -rf $(IGNORE)
