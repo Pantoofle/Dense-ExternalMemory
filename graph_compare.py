@@ -1,10 +1,12 @@
 import plotly as py
 import plotly.graph_objs as go
 import numpy as np
+import re
 
 from extractor import *
+from data import *
 
-def convert_graph(mat):
+def m2dic_convert(mat):
     """
     Convert a graph represented by a matrix: mat[i][j] is the list of characters that read from i lead into j
     Into a dictionnary graph: 
@@ -27,18 +29,69 @@ def convert_graph(mat):
     t[str(n-1)]["exit"] = [True]
 
     return t
-
-
-def test_inclusion(t1, t2, n, stop_rate=0.1):
+ 
+def dot2dic_convert(dot):
     """
-    Generates n words over t2 and returns the porcentages of false/true positive/negative
+    converts a graph encoded in its dot form into the dictionnary
     """
     
-    walks = [rand_walk(t2) for i in range(n)]
-    words = [w[1] for w in walks]
-    prediction = [w[0] for w in walks]
+    t = {"entry": {"id": [0]}}
 
-    solution = [test_word(t1, w) for w in words]
+    # Extracting exit nodes
+    exit = []
+    m = re.search(r'.*doublecircle.*; (.*);', dot)
+    if m is not None:
+        ex_txt = m.group(1)
+        it = re.finditer(r'\d+', ex_txt, re.S)
+        for i in it:
+            exit.append(int(ex_txt[i.start(): i.end()]))
+
+    # Extracting links
+    transition = []
+    it = re.finditer(r'\t(.*) -> (.*);', dot)
+    for i in it:
+        link = dot[i.start():i.end()]
+        it2 = re.finditer(r'\d+', link)
+        for j in it2:
+            transition.append(int(link[j.start():j.end()]))
+
+    transition =transition[2:]
+
+    def build_if_not(t, n):
+        if n in t:
+            return
+        else:
+            t[n] = {"exit": [False]}
+            return
+
+    # Building graph
+    for i in range(0,len(transition),3):
+        dep = transition[i]
+        to  = transition[i+1]
+        label = str(transition[i+2])
+        
+        build_if_not(t, dep)
+        build_if_not(t, to)
+        
+        t[dep][label] = [to]
+
+    # Setting the exit nodes
+    for i in exit:
+        t[i]["exit"][0] = True
+
+    return t
+        
+
+def test_inclusion(t1, t2, x):
+    """
+    Generates the words x over t2 and returns the porcentages of false/true positive/negative
+    """
+    
+    prediction = [test_word(t2, w) for w in x]
+
+    solution = [test_word(t1, w) for w in x]
+    
+    n = len(x)
     
     npos = len([1 for p in solution if p])
     nneg = len([1 for p in solution if not p])
@@ -66,60 +119,68 @@ def test_inclusion(t1, t2, n, stop_rate=0.1):
     return tpr, fpr, tnr, fnr
 
       
-def test_network(model, automaton, nb_tests,alphabet, batch_size, 
-        nb_words, stop_rate, max_length):
+def test_network(model, automaton, alphabet, batch_size, nb_words, min_length, max_length):
     x = []
     y = []   
-    print("generating the predictions")
-    for i in range(3, max_length+1):
-        x_in, _, _ = automaton_batch(nb_tests,alphabet, i, automaton=automaton)
+    print("Generating the words and predictions")
+    for i in range(min_length, max_length+1):
+        x_in, _, _ = automaton_batch(nb_words, alphabet, i, automaton=automaton)
         y_in = model.predict(x_in, batch_size = batch_size)
         x += [[str(a.tolist().index(1.)) for a in b] for b in x_in]
         y += y_in.tolist()
-   
+    
+    #  x = ["".join(w) for w in x]
+    y = [w[0] for w in y]
+    print(len(y), " values")
+    thresholds = sorted(list(set(y)))
+    print(len(thresholds), " different")
     tpr = []
     fpr = []
 
-    step = 0.1
-    for i in range(1, 10):
-        threshold = step*i
-        print("\nThreshold: ", threshold)
-        x_in = ["".join(w) for w in x]
-        l_plus = [x for i, x in enumerate(x_in) if y[i][0] > threshold]
-        l_minus = [x for i, x in enumerate(x_in) if y[i][0] <= threshold]
-    
-        a2 = extract(l_plus, l_minus)    
-        a = convert_graph(automaton)
+    for t in thresholds:
+        print("\nThreshold: ", t)
 
-        r = test_inclusion(a, a2, nb_words, stop_rate=stop_rate)
-        print("True positive rate:  ", r[0])
-        print("False positive rate: ", r[1])
-        print("True negative rate:  ", r[2])
-        print("False negative rate: ", r[3])
+        a = alf_infere(model, automaton, t, alphabet) 
+        a = dot2dic_convert(a)
+
+        r = test_inclusion(a, automaton, x)
+        #  print("True positive rate:  ", r[0])
+        #  print("False positive rate: ", r[1])
+        #  print("True negative rate:  ", r[2])
+        #  print("False negative rate: ", r[3])
         tpr += [r[0]]
         fpr += [r[1]]
 
     return tpr, fpr
 
-def trace_ROC(tpr, fpr): 
+def trace_ROC(tpr, fpr):
+    plots = []
     trace = go.Scatter(
-            x = np.array(fpr),
-            y = np.array(tpr),
-            name = "Memory",
+            x = np.array(fpr[0]),
+            y = np.array(tpr[0]),
+            name = "Memory network",
             mode = 'markers',
             marker = dict(
                 size = 10,
-                color = 'rgba(152, 0, 0, .8)'))
+                color = 'rgba(255, 0, 0, .8)'))
 
-    plots = [trace]
+    plots += [trace]
+    trace = go.Scatter(
+            x = np.array(fpr[1]),
+            y = np.array(tpr[1]),
+            name = "LSTM",
+            mode = 'markers',
+            marker = dict(
+                size = 10,
+                color = 'rgba(0, 255, 0, .8)'))
 
-    layout = dict(title = 'Styled Scatter',
-              yaxis = dict(zeroline = False, range=[0, 1]),
-              xaxis = dict(zeroline = False, range=[0, 1])
+
+    plots += [trace]
+    layout = dict(title = 'ROC',
+              yaxis = dict(zeroline = False, range=[-0.1, 1.1]),
+              xaxis = dict(zeroline = False, range=[-0.1, 1.1])
              )
 
     fig = dict(data=plots, layout=layout)    
     py.offline.plot(fig, filename='roc.html')
- 
-
 
