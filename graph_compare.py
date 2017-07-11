@@ -84,7 +84,7 @@ def dot2dic_convert(dot):
 
 def test_inclusion(t1, t2, x):
     """
-    Generates the words x over t2 and returns the porcentages of false/true positive/negative
+    Tests the words x over t2 and returns the ratio of false/true positive/negative
     """
     
     prediction = [test_word(t2, w) for w in x]
@@ -120,6 +120,12 @@ def test_inclusion(t1, t2, x):
 
       
 def test_network(model, automaton, alphabet, batch_size, nb_words, min_length, max_length):
+    """
+    Generates a test set of words over the automaton
+    Returns the different rates (true positives and false positives)
+    computed with a lot of different thresholds
+    """
+    
     x = []
     y = []   
     print("Generating the words and predictions")
@@ -129,11 +135,12 @@ def test_network(model, automaton, alphabet, batch_size, nb_words, min_length, m
         x += [[str(a.tolist().index(1.)) for a in b] for b in x_in]
         y += y_in.tolist()
     
-    #  x = ["".join(w) for w in x]
     y = [w[0] for w in y]
     print(len(y), " values")
+    
     thresholds = sorted(list(set(y)))
     print(len(thresholds), " different")
+   
     tpr = []
     fpr = []
 
@@ -154,6 +161,12 @@ def test_network(model, automaton, alphabet, batch_size, nb_words, min_length, m
     return tpr, fpr
 
 def trace_ROC(tpr, fpr):
+    """
+    Calls the plotly lib to trace the ROC graph represented by
+    tpr the rate of true pos and fpr the rate of false pos
+    for different thresholds
+    """
+    
     plots = []
     trace = go.Scatter(
             x = np.array(fpr[0]),

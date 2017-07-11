@@ -8,6 +8,13 @@ from keras.initializers import *
 
 
 class IO_Heads(Recurrent):
+    """
+    The DNC kernel
+    Generates and uses the memory, the read heads
+    Read:  Graves, Alex, et al. "Hybrid computing using a neural network with dynamic external memory." Nature 538.7626 (2016): 471-476.
+    to understand the notations and the different parts
+    """
+
     def __init__(self, units, vector_size, memory_size, entry_size, depth=0, read_heads=1, **kwargs):
         print("Initialisating IO_Heads...")
         self.memory_size = memory_size
@@ -114,10 +121,7 @@ class IO_Heads(Recurrent):
             return w
 
 
-        # _, m = tf.split(states[0], [self.vector_size, self.memory_size*(self.vector_size+2)], axis=1)
         print("Getting previous memory state and weights...")
-        print("States: ", states)
-        
         
         self.memory = states[0]
         w_t = states[1:]
@@ -129,7 +133,6 @@ class IO_Heads(Recurrent):
         for i in range(self.depth):
             pre = K.dot(pre, self.deep_pre[i])
 
-        print("pre: ", pre)
         
         heads = self.read_heads + 1
 
@@ -189,11 +192,3 @@ class IO_Heads(Recurrent):
         base_config = super(IO_Heads, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-    #  def compute_output_shape(self, input_shape):
-    #      output_shape = (input_shape[0], input_shape[1], self.units)
-    #      return output_shape
-#  class ResetMemory(Callback):
-#      def on_batch_begin(self, batch, logs={}):
-#          self.layer[0] = tf.random_uniform((self.memory_size, self.vect_size), 0, 1,  dtype="float32")
-#
-    

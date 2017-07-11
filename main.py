@@ -74,15 +74,22 @@ if __name__ == "__main__":
         model2.load_weights(SAVE_DIR+"LSTM.h5")
         train = (input("Train again? (y/n) ") == "y")    
   
+    # Training the models
     if train:
         for i in range(NB_TRAIN):        
             length=np.random.randint(MIN_LENGTH, MAX_LENGTH+1)
             if i == 0:
                 length = MIN_LENGTH
             print("Train ", i+1, " of ", NB_TRAIN, ": word length: ", length)
+            
             train = 2**(length+1)
+            # Generating only one set of words so that both models are trained on the same set
             x_in, y_in, tot = automaton_batch(train, ALPHABET, length, automaton=automaton)
+            
+            # Rate of 1 and 0, to monitor if the network answeres always YES or NO, or if
+            # it's thinking a bit more and imporving the succes rate 
             print("Rate: ", tot*1./train, " - ", 1-tot*1./train)
+
             print("Training DNC ...")
             model.fit(x_in, y_in,
                 batch_size=BATCH_SIZE,
@@ -102,20 +109,19 @@ if __name__ == "__main__":
         model2.save_weights(SAVE_DIR+"LSTM.h5")
 
 
-    print("Generating infered automaton")
-   
+    print("Testing network's efficiency")
     tpr, fpr = test_network(model, automaton, ALPHABET, BATCH_SIZE, NB_WORDS, MIN_LENGTH, MAX_LENGTH)
-
     tpr2, fpr2 = test_network(model2, automaton, ALPHABET, BATCH_SIZE, NB_WORDS, MIN_LENGTH, MAX_LENGTH)
     
+    # Tracing the graph
     trace_ROC([tpr, tpr2], [fpr, fpr2])
     
+    # Save the dots to do statistical analysis on lots of runs 
     keep = (input("Keep dnc? ") == "y")
     with open("dnc_dots.txt", "w+") as file:
         
         for t, f in zip(tpr, fpr):
             file.write(str(t)+" "+str(f)+"\n")
-
 
     keep = (input("Keep lstm? ") == "y")
     with open("lstm_dots.txt", "w+") as file:

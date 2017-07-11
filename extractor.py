@@ -1,7 +1,8 @@
 import numpy as np
 import graphviz as gv
 
-ALF_PATH="/home/gyldhas/stage/libalf/online"
+# Where the alf executable and lib can be found
+ALF_PATH="libalf/online"
 ALF_ENV ={"LD_LIBRARY_PATH":"/usr/local/lib"}
 
 def rand_walk(t, stop_rate=0.25, length=0):
@@ -39,6 +40,11 @@ def rand_walk(t, stop_rate=0.25, length=0):
 
 
 def build_tree(L_plus):
+    """
+    Builds the initial tree for the RPNI method to infer automaton, from L_plus,
+    the list of accepted words
+    """
+    
     n = 1
     tree = {0: {"exit": [False]}, 
             "entry": {"id": [0]}}
@@ -56,12 +62,15 @@ def build_tree(L_plus):
     return tree
 
 def rename_depth(t):
+    """
+    Rename the whole graph in depth-first order
+    """
     fifo = [t["entry"]["id"][0]]
     done = []
     d = 0
     name = {}
 
-    # Computing the new name
+    # Computing the new name of each node
     while fifo != []:
         e = fifo[0]
         fifo = fifo[1:]
@@ -76,7 +85,8 @@ def rename_depth(t):
             name[e] = d
             d += 1
             done += [e]
-    # Renaming
+
+    # Renaming nodes and transitions
     m = {}
     for e in t:
         m[e] = {}
@@ -98,6 +108,11 @@ def rename_depth(t):
         
 
 def merge(t, a, b):
+    """
+    Merging nodes a and b from graph t
+    The resulting graph may be undeterministic
+    """
+
     m = {i: {c: [e for e in t[i][c]] for c in t[i]} for i in t}
     # Rewrite each b and a into ab
     ab = a + "." + b
@@ -111,6 +126,7 @@ def merge(t, a, b):
                         m[i][c][j] = ab
                 # Delete multiple occurences
                 m[i][c] = list(set(m[i][c]))
+    
     # Merge the exiting nodes
     if b not in m or a not in m:
         return m
@@ -126,11 +142,15 @@ def merge(t, a, b):
     m[ab] = m[a]
     m.pop(a)
     m.pop(b) 
+    # Special case of entry node merged
     if a == m["entry"]["id"][0] or b == m["entry"]["id"][0]:
         m["entry"]["id"][0] = ab
     return m
 
 def reduce(t):
+    """
+    Merges conflict nodes until t becomes deterministic
+    """
 
     m = {i: {c: [e for e in t[i][c]] for c in t[i]} for i in t}
     restart =  True
@@ -147,6 +167,10 @@ def reduce(t):
     return m
 
 def test_word(t, w):
+    """
+    Tests wether w is accepted by automaton t or not
+    """
+
     state = t["entry"]["id"][0]
     for c in w:
         if c not in t[state]:
@@ -155,6 +179,10 @@ def test_word(t, w):
     return t[state]["exit"][0]
 
 def test_Lminus(t, L):
+    """
+    Tests if a word in L is accepted by automaton t
+    """
+
     for w in L:
         if test_word(t, w):
             return False
@@ -162,6 +190,10 @@ def test_Lminus(t, L):
 
 
 def cmp(x, y):
+    """
+    Lexicographic-like order on nodes names
+    """
+
     a = x.split(".")
     b = y.split(".")
 
@@ -177,6 +209,10 @@ def cmp(x, y):
         return int(a[i]) < int(b[i])
 
 def sort_nodes(l):
+    """
+    Merge sorts the list of nodes l with previous order
+    """
+    
     if len(l) < 2:
         return l
     else:
@@ -197,10 +233,18 @@ def sort_nodes(l):
             return c+a[i:]
 
 def generate_order(t):
+    """
+    extracts the list of nodes of t and returns them sorted
+    """
+
     nodes = [i for i in t if i != "entry"]
     return sort_nodes(nodes)
 
-def trace_auto(t):
+def trace_auto(t, path):
+    """
+    Trace given automaton
+    """
+    
     graph = gv.Digraph(format="svg")
     for i in t:
         if i == "entry":
@@ -215,9 +259,14 @@ def trace_auto(t):
                 continue
             for j in t[i][c]:
                 graph.edge(i, j, str(c))
-    graph.render("img/infered_automaton")
+    graph.render(path)
 
 def extract(L_p, L_m):
+    """
+    Applies RPNI method to infer an automaton accepting L_p 
+    and refusing L_m
+    """
+
     print("Extracting...")
     t = build_tree(L_p)
     t = rename_depth(t)
@@ -245,11 +294,14 @@ def extract(L_p, L_m):
                 break
 
     t = rename_depth(t)
-    trace_auto(t)
     return t
 
 
 def word2vect(w, alphabet):
+    """
+    Rewrites word w in "one-hot" format
+    """
+    
     x = np.zeros((1, len(w), alphabet))
     for j in range(len(w)):
         x[0][j][int(w[j])] = 1.
@@ -258,6 +310,13 @@ def word2vect(w, alphabet):
 
 
 def alf_infere(model, automaton, threshold, alphabet):
+    """
+    Calls libalf algorithmes to infere the automaton learned by model
+    automaton is the solution and is used to do random walks when the 
+    algo needs a word
+    """
+
+    # Calling the alf algo
     import subprocess as sp
     s = sp.Popen([ALF_PATH], 
             stdout=sp.PIPE, 
@@ -269,12 +328,16 @@ def alf_infere(model, automaton, threshold, alphabet):
     
     conj = ""
 
+    # Sending the alphabet size to alf
     o.readline()
     i.write(str(alphabet) + "\n")
     i.flush()
+
+    # Because the network can't work with empty words, we answer manually
     o.readline()
     i.write(str(1) + "\n")
     i.flush()
+
     read = True
 
     while True:
@@ -283,13 +346,17 @@ def alf_infere(model, automaton, threshold, alphabet):
         else:
             read = True
         #  print("He said: ",w)
+    
+        # When alf makes a conjecture
         if w == "Conjecture:":
             #  print("Oh, a try! Bring it on!")
             c = ""
+            # Read the conjecture
             while w != "End of auto":
                 w = o.readline()[:-1]
                 c += w
 
+            # If it is the same as the last time, we reached the automaton
             if c == conj:
                 #  print("Okay!")
                 i.write("y\n")
@@ -301,6 +368,7 @@ def alf_infere(model, automaton, threshold, alphabet):
                 i.write("n\n")
                 i.flush()
                 
+                # Else we give a random word to continue the algo
                 w = o.readline()[:-1]
                 _, word = rand_walk(automaton)
                 word = "".join(word)
@@ -308,12 +376,15 @@ def alf_infere(model, automaton, threshold, alphabet):
                 i.flush()
                 
                 w = o.readline()[:-1]
+
+                # We may be unlucky and have given a word already given. so we stop there
                 if w == "Conjecture:":
                     i.write("y\n")
                     i.flush()
                     read = False
                     continue
 
+                # Else, we predict the word we just gave
                 y = model.predict(word2vect(word, alphabet), batch_size=1)
                 r = str(int(y[0][0] > threshold)) + "\n"
                 i.write(r)
@@ -321,10 +392,12 @@ def alf_infere(model, automaton, threshold, alphabet):
                 continue  
         
         if w == "Result:":
+            # The algo stopped and gave an answer
             res = o.read()
             #  print("Result:\n", res)
             return res
         
+        # Else, the common scenario, we translate the word requested and answer the question
         x= word2vect(w, alphabet)
 
         y = model.predict(x, batch_size=1)
@@ -332,9 +405,6 @@ def alf_infere(model, automaton, threshold, alphabet):
         i.write(r)
         i.flush()
         #  print("I answered ",r)
-
-
-
 
 
 

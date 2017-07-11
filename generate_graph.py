@@ -1,6 +1,9 @@
 import pickle as pi
 
 def automaton1():
+    """
+    Returns the graph encoding language 1*(01*0)*1*
+    """
     return {"entry": {"id":[0]},
             0: {"0": [1],
                 "1": [0],
@@ -11,6 +14,9 @@ def automaton1():
             }
 
 def automaton2():
+    """
+    Returns the graph encoding language 0A*0 + 1A*1 with A the entire alphabet {0, 1}
+    """
     return {"entry": {"id": [0]},
             0: {"0": [1],
                 "1": [2],
