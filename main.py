@@ -12,6 +12,7 @@ from data import *
 from extractor import *
 from graph_compare import *
 from generate_graph import *
+from roc import *
 
 # Train params
 ALPHABET=2
@@ -65,9 +66,10 @@ if __name__ == "__main__":
                   loss='mean_squared_error',
                   metrics=['accuracy'])
  
-    load = input("Load the models? (y/n) ")
-    load = (load == "y")
+    #  load = input("Load the models? (y/n) ")
+    #  load = (load == "y")
     train = True
+    load = False
 
     if load:
         model.load_weights(SAVE_DIR+"DNC.h5")
@@ -102,8 +104,10 @@ if __name__ == "__main__":
                 epochs=LSTM_EPOCH)
                 #  callbacks=[EarlyStopping(monitor='loss', min_delta=0.005, patience=10)])
 
-    save = input("Shall I save the models ? (y/n): ")
-    save = (save=="y")
+    #  save = input("Shall I save the models ? (y/n): ")
+    #  save = (save=="y")
+    save = True
+
     if save:
         model.save_weights(SAVE_DIR+"DNC.h5")
         model2.save_weights(SAVE_DIR+"LSTM.h5")
@@ -114,18 +118,28 @@ if __name__ == "__main__":
     tpr2, fpr2 = test_network(model2, automaton, ALPHABET, BATCH_SIZE, NB_WORDS, MIN_LENGTH, MAX_LENGTH)
     
     # Tracing the graph
-    trace_ROC([tpr, tpr2], [fpr, fpr2])
+    trace_ROC([fpr, fpr2], [tpr, tpr2])
     
     # Save the dots to do statistical analysis on lots of runs 
-    keep = (input("Keep dnc? ") == "y")
-    with open("dnc_dots.txt", "w+") as file:
-        
+    #  keep = (input("Keep dnc? ") == "y")
+    keep = True
+    with open("dnc_dots.txt", "a") as file:
         for t, f in zip(tpr, fpr):
-            file.write(str(t)+" "+str(f)+"\n")
+            file.write(str(f)+" "+str(t)+"\n")
+        file.write("===")        
 
-    keep = (input("Keep lstm? ") == "y")
-    with open("lstm_dots.txt", "w+") as file:
-        for t, f in zip(tpr, fpr):
-            file.write(str(t)+" "+str(f)+"\n")
+    #  keep = (input("Keep lstm? ") == "y")
+    keep = True
+    with open("lstm_dots.txt", "a") as file:
+        for t, f in zip(tpr2, fpr2):
+            file.write(str(f)+" "+str(t)+"\n")
+        file.write("===")        
+
+    
+    print("Tracing the mean")
+    x, y = mean_roc("dnc_dots.txt")
+    x2, y2 = mean_roc("lstm_dots.txt")
+
+    trace_ROC([x, x2], [y, y2])
 
 
