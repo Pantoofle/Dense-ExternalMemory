@@ -1,5 +1,3 @@
-import plotly as py
-import plotly.graph_objs as go
 import numpy as np
 import re
 
@@ -143,9 +141,10 @@ def test_network(model, automaton, alphabet, batch_size, nb_words, min_length, m
    
     tpr = []
     fpr = []
-
+    i = 1
     for t in thresholds:
-        print("\nThreshold: ", t)
+        print("Threshold ", i, "/", len(thresholds), ": ", t)
+        i += 1
 
         a = alf_infere(model, automaton, t, alphabet) 
         a = dot2dic_convert(a)
@@ -159,41 +158,4 @@ def test_network(model, automaton, alphabet, batch_size, nb_words, min_length, m
         fpr += [r[1]]
 
     return tpr, fpr
-
-def trace_ROC(tpr, fpr):
-    """
-    Calls the plotly lib to trace the ROC graph represented by
-    tpr the rate of true pos and fpr the rate of false pos
-    for different thresholds
-    """
-    
-    plots = []
-    trace = go.Scatter(
-            x = np.array(fpr[0]),
-            y = np.array(tpr[0]),
-            name = "Memory network",
-            mode = 'markers',
-            marker = dict(
-                size = 10,
-                color = 'rgba(255, 0, 0, .8)'))
-
-    plots += [trace]
-    trace = go.Scatter(
-            x = np.array(fpr[1]),
-            y = np.array(tpr[1]),
-            name = "LSTM",
-            mode = 'markers',
-            marker = dict(
-                size = 10,
-                color = 'rgba(0, 255, 0, .8)'))
-
-
-    plots += [trace]
-    layout = dict(title = 'ROC',
-              yaxis = dict(zeroline = False, range=[-0.1, 1.1]),
-              xaxis = dict(zeroline = False, range=[-0.1, 1.1])
-             )
-
-    fig = dict(data=plots, layout=layout)    
-    py.offline.plot(fig, filename='roc.html')
 
