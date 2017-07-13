@@ -12,7 +12,7 @@ You will also need the `libalf` C++ library to infere the automaton
 
 It seems you can't install `libalf` in a `virtualenv`
 
-Download the last sources in the (official libalf website)[http://libalf.informatik.rwth-aachen.de/index.php?page=download]
+Download the last sources in the [official libalf website](http://libalf.informatik.rwth-aachen.de/index.php?page=download)
 
 You don't need the files `examples`
 
@@ -20,7 +20,7 @@ Extract each source with `tar xvjf <archive>`
 
 Go to each created dir and run `make install`. You may need root privileges
 
-BEWARE. You must install the different libs following the order displayed in the (download page)[http://libalf.informatik.rwth-aachen.de/index.php?page=download]
+BEWARE. You must install the different libs following the order displayed in the [download page](http://libalf.informatik.rwth-aachen.de/index.php?page=download)
 Else, the install will be incomplete
  
  To uninstall `libalf`, go to each dir and run `make uninstall`
