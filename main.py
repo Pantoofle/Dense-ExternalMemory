@@ -141,7 +141,7 @@ if __name__ == "__main__":
     x2, y2 = mean_roc("lstm_dots.dat")
     
     if len(sys.argv) < 2:
-        path = roc.html
+        path = "roc/roc.html"
     else:
         path = sys.argv[1]
 
