@@ -118,19 +118,19 @@ if __name__ == "__main__":
     tpr2, fpr2 = test_network(model2, automaton, ALPHABET, BATCH_SIZE, NB_WORDS, MIN_LENGTH, MAX_LENGTH)
     
     # Tracing the graph
-    trace_ROC([fpr, fpr2], [tpr, tpr2])
+    #  trace_ROC([fpr, fpr2], [tpr, tpr2])
     
     # Save the dots to do statistical analysis on lots of runs 
     #  keep = (input("Keep dnc? ") == "y")
     keep = True
-    with open("dnc_dots.txt", "a") as file:
+    with open("dnc_dots.dat", "a") as file:
         for t, f in zip(tpr, fpr):
             file.write(str(f)+" "+str(t)+"\n")
         file.write("===")        
 
     #  keep = (input("Keep lstm? ") == "y")
     keep = True
-    with open("lstm_dots.txt", "a") as file:
+    with open("lstm_dots.dat", "a") as file:
         for t, f in zip(tpr2, fpr2):
             file.write(str(f)+" "+str(t)+"\n")
         file.write("===")        
