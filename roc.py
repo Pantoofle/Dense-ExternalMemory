@@ -4,7 +4,7 @@ import re
 import numpy as np
 
 
-def trace_ROC(fpr, tpr):
+def trace_ROC(fpr, tpr, path):
     """
     Calls the plotly lib to trace the ROC graph represented by
     tpr the rate of true pos and fpr the rate of false pos
@@ -39,7 +39,7 @@ def trace_ROC(fpr, tpr):
              )
 
     fig = dict(data=plots, layout=layout)    
-    py.offline.plot(fig, filename='roc.html')
+    py.offline.plot(fig, filename=path)
 
 def mean_roc(path):
     """

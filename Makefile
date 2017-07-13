@@ -19,6 +19,7 @@ pip_deps:
 build: online
 	mkdir -p models
 	mkdir -p img
+	mkdir -p rocs
 
 run: build
 	rm -rf logs/
