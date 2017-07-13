@@ -4,12 +4,26 @@
 Neural Network with DNC structure and external memory. Goal is to study the use of memory for NN facing complex tasks
 
 # Dependencies
-`python 3.6`, `numpy`, `tensorflow >= 1.2.1`, `keras >= 1.0.5`, `h5py`, `plotly `
+`python 3.6`, `numpy`, `tensorflow >= 1.2.1`, `keras >= 1.0.5`, `h5py`, `plotly`, `matplotlib`
 
-# Installation
+You will also need the `libalf` C++ library to infere the automaton
+
+# Libalf installation
+
+Download the last sources in the (official libalf website)[http://libalf.informatik.rwth-aachen.de/index.php?page=download]
+
+Extract each source: `tar xvjf *.tar.bz2`
+
+Go to each created dir and run `make`
+
+BEWARE. You must install the different libs following the order displayed in the (download page)[http://libalf.informatik.rwth-aachen.de/index.php?page=download]
+Else, the install will be incomplete
+ 
+
+# Main installation
 ## With local pip
 
-- Install the dependancies: `pip install --upgrade tensorflow keras h5py`
+- Install the dependancies: `make pip_deps `
 - Build the program (it justs make directories where models will be stored): `make build`
 - Run the program with `make run` OR `make`
 
