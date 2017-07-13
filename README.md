@@ -4,13 +4,13 @@
 Neural Network with DNC structure and external memory. Goal is to study the use of memory for NN facing complex tasks
 
 # Dependencies
-`python 3.6`, `numpy`, `tensorflow >= 1.2.1`, `keras >= 1.0.5`, `h5py`, `plotly`, `matplotlib`
+`python 3.6`, `numpy`, `tensorflow >= 1.2.1`, `keras >= 1.0.5`, `h5py`, `plotly`, `matplotlib`, `graphviz`
 
 You will also need the `libalf` C++ library to infere the automaton
 
 # Libalf installation
 
-It seems you can't install it in a `virtualenv`
+It seems you can't install `libalf` in a `virtualenv`
 
 Download the last sources in the (official libalf website)[http://libalf.informatik.rwth-aachen.de/index.php?page=download]
 
