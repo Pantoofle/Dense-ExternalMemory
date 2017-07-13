@@ -137,9 +137,14 @@ if __name__ == "__main__":
 
     
     print("Tracing the mean")
-    x, y = mean_roc("dnc_dots.txt")
-    x2, y2 = mean_roc("lstm_dots.txt")
+    x, y = mean_roc("dnc_dots.dat")
+    x2, y2 = mean_roc("lstm_dots.dat")
+    
+    if len(sys.argv) < 2:
+        path = roc.html
+    else:
+        path = sys.argv[1]
 
-    trace_ROC([x, x2], [y, y2])
+    trace_ROC([x, x2], [y, y2], path )
 
 
