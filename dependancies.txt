@@ -1,5 +1,6 @@
 numpy
 tensorflow
+graphviz
 keras
 h5py
 plotly
