@@ -10,6 +10,8 @@ You will also need the `libalf` C++ library to infere the automaton
 
 # Libalf installation
 
+You can install it in a `virtualenv`
+
 Download the last sources in the (official libalf website)[http://libalf.informatik.rwth-aachen.de/index.php?page=download]
 
 Extract each source: `tar xvjf *.tar.bz2`
@@ -23,7 +25,7 @@ Else, the install will be incomplete
 # Main installation
 ## With local pip
 
-- Install the dependancies: `make pip_deps `
+- Install the dependancies: `make pip_depa `
 - Build the program (it justs make directories where models will be stored): `make build`
 - Run the program with `make run` OR `make`
 
@@ -42,4 +44,7 @@ To uninstall everything, it's easy:
 ```
 make 
 ```
-And then the program will ask if you want to load/save the models/results
+
+Or run `multiple_run.sh` if you want the program to run multiple times
+
+Edit it to set the number of runs
