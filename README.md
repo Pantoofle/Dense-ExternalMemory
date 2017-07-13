@@ -14,11 +14,11 @@ It seems you can't install `libalf` in a `virtualenv`
 
 Download the last sources in the [official libalf website](http://libalf.informatik.rwth-aachen.de/index.php?page=download)
 
-You don't need the files `examples`
+You don't need the files `examples` and `finite-automaton-tools`
 
 Extract each source with `tar xvjf <archive>`
 
-Go to each created dir and run `make install`. You may need root privileges
+Go to each created dir and run `make install` (Be careful, not only `make`). You may need root privileges
 
 BEWARE. You must install the different libs following the order displayed in the [download page](http://libalf.informatik.rwth-aachen.de/index.php?page=download)
 Else, the install will be incomplete
@@ -51,3 +51,8 @@ make
 Or run `multiple_run.sh` if you want the program to run multiple times
 
 Edit it to set the number of runs
+
+All the parameters of the layer and its usage are declared in `main.py`, edit them as you will
+
+
+
