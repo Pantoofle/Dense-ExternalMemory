@@ -24,6 +24,7 @@ MEMORY_SIZE=15
 ENTRY_SIZE=10
 DEPTH=1
 READ_HEADS=2
+WRITE_HEADS=2
 
 # Training params
 BATCH_SIZE=1
@@ -49,6 +50,7 @@ if __name__ == "__main__":
             name="MAIN",
             #  return_sequences=True,
             read_heads=READ_HEADS,
+            write_heads=WRITE_HEADS,
             depth=DEPTH)(inputs)
     
     lstm = LSTM(32)(inputs)

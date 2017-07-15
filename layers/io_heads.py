@@ -15,7 +15,14 @@ class IO_Heads(Recurrent):
     to understand the notations and the different parts
     """
 
-    def __init__(self, units, vector_size, memory_size, entry_size, depth=0, read_heads=1, **kwargs):
+    def __init__(self, units, 
+            vector_size, 
+            memory_size, 
+            entry_size, 
+            depth=0, 
+            read_heads=1, 
+            write_heads=1, 
+            **kwargs):
         print("Initialisating IO_Heads...")
         self.memory_size = memory_size
         self.vector_size = vector_size
@@ -23,12 +30,24 @@ class IO_Heads(Recurrent):
         self.entry_size = entry_size
         self.depth = depth
         self.read_heads = read_heads
+        self.write_heads = write_heads
+        self.heads = read_heads + write_heads
         super(IO_Heads, self).__init__(**kwargs)
 
     def build(self, input_shape):
         print("Building IO_Heads...")
-        heads = self.read_heads + 1
-        pre_size = self.entry_size*heads+1*heads+self.memory_size*heads+self.entry_size+self.entry_size
+        
+        # The key vectors for "focus by content"
+        pre_size = self.entry_size*self.heads
+        # The interpolation coefficient
+        pre_size += 1*self.heads
+        # The shift vectors
+        pre_size += self.memory_size*self.heads
+        # The erase vectors
+        pre_size += self.entry_size*self.write_heads
+        # The vectors to write
+        pre_size += self.entry_size*self.write_heads
+        
         self.pre_treat = self.add_weight(
                 shape=(self.vector_size, pre_size),
                 initializer="uniform",
@@ -61,13 +80,16 @@ class IO_Heads(Recurrent):
                 name="POST")
 
         self.mem_shape = (self.memory_size, self.entry_size)
-        w = [tf.constant(0., shape=(self.memory_size,)) for i in range(heads)]
+        
+        # The weights will be passed as states for next step
+        w = [tf.constant(0., shape=(self.memory_size,)) for i in range(self.heads)]
         self.states=[tf.constant(0., shape=self.mem_shape)] + w
+
         print("States at init: ", self.states)
         self.built = True
 
     def get_initial_state(self, inputs):
-        w = [tf.constant(0., shape=(self.memory_size,)) for i in range(self.read_heads+1)]
+        w = [tf.constant(0., shape=(self.memory_size,)) for i in range(self.heads)]
         return [tf.constant(0., shape=self.mem_shape)] + w
 
     def step(self, inputs, states):
@@ -120,56 +142,73 @@ class IO_Heads(Recurrent):
             w = convolution(w, shift)
             return w
 
-
         print("Getting previous memory state and weights...")
         
         self.memory = states[0]
         w_t = states[1:]
 
+        # Only use one vect at a time. Forces batch_size=1
         inputs = inputs[0]       
 
+        # Apply pre treatment
         pre = K.dot(tf.reshape(inputs, (1, self.vector_size)), self.pre_treat)
         
         for i in range(self.depth):
             pre = K.dot(pre, self.deep_pre[i])
 
-        
-        heads = self.read_heads + 1
-
-        r_keys, interpol_gates, shifts, erase, w_vect = tf.split(pre, 
-            [self.entry_size*heads, 
-                1*heads, 
-                self.memory_size*heads, 
-                self.entry_size, 
-                self.entry_size],
+        print("pre: ", pre)
+        # Extract the vectors
+        keys, interpol_gates, shifts, erasers, w_vects = tf.split(pre, 
+            [self.entry_size*self.heads, 
+                1*self.heads, 
+                self.memory_size*self.heads, 
+                self.entry_size*self.write_heads, 
+                self.entry_size*self.write_heads],
             axis=1)
 
-        r_key = []
-        for i in range(heads):
-            r, r_keys = tf.split(r_keys, [self.entry_size, self.entry_size*(heads-i-1)], axis=1)
-            r_key.append(tf.nn.softmax(r))
+        key = []
+        for i in range(self.heads):
+            k, keys = tf.split(keys, [self.entry_size, self.entry_size*(self.heads-i-1)], axis=1)
+            key.append(tf.nn.softmax(k))
 
         interpol_gate = []
-        for i in range(heads):
-            ig, interpol_gates = tf.split(interpol_gates, [1, 1*(heads-i-1)], axis=1)
+        for i in range(self.heads):
+            ig, interpol_gates = tf.split(interpol_gates, [1, 1*(self.heads-i-1)], axis=1)
             interpol_gate.append(ig)
         
         shift = []
-        for i in range(heads):
-            s, shifts = tf.split(shifts, [self.memory_size, self.memory_size*(heads-i-1)], axis=1)
+        for i in range(self.heads):
+            s, shifts = tf.split(shifts, [self.memory_size, self.memory_size*(self.heads-i-1)], axis=1)
             shift.append(s)
+
+        erase = []
+        for i in range(self.write_heads):
+            e, erasers = tf.split(erasers, 
+                    [self.entry_size, self.entry_size*(self.write_heads-i-1)], axis=1)
+            erase.append(e)
+
+        write = []
+        for i in range(self.write_heads):
+            a, w_vects = tf.split(w_vects, 
+                    [self.entry_size, self.entry_size*(self.write_heads-i-1)], axis=1)
+            write.append(a)
 
         print("Reading... ")
         reads = []
-        r_weight = [] 
-        for i in range(heads-1):
-            r= address(w_t[i], r_key[i], interpol_gate[i], shift[i])
-            r_weight.append(tf.reshape(r, (self.memory_size,)))
+        weight = [] 
+        for i in range(self.read_heads):
+            r= address(w_t[i], key[i], interpol_gate[i], shift[i])
+            weight.append(tf.reshape(r, (self.memory_size,)))
             reads.append(read_mem(r))
-        
+       
+        print("WH: ", len(erase), "   ", len(write))
+
         print("Writing...")
-        w_weight = address(w_t[-1], r_key[-1], interpol_gate[-1], shift[-1])
-        write_mem(w_weight, w_vect, erase)   
+        for i in range(self.write_heads):
+            j = self.read_heads +i
+            w_weight = address(w_t[j], key[j], interpol_gate[j], shift[j])
+            write_mem(w_weight, write[i], erase[i])   
+            weight.append(tf.reshape(w_weight, (self.memory_size,)))
         
         r = K.concatenate(reads+[tf.reshape(inputs, (1, self.vector_size))], axis=1)
 
@@ -177,9 +216,7 @@ class IO_Heads(Recurrent):
             r = K.dot(r, self.deep_post[i])
 
         res = K.dot(r, self.post)
-        print("Ret: ", res)
-        print("States: ",[self.memory] + r_weight + [tf.reshape(w_weight, (self.memory_size,))])
-        return res, [self.memory] + r_weight + [tf.reshape(w_weight, (self.memory_size,))] 
+        return res, [self.memory] + weight 
 
     def get_config(self):
         config = {
